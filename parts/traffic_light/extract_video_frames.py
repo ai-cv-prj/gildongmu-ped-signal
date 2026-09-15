@@ -1,4 +1,5 @@
-"""Extract evenly sampled video frames for traffic-signal annotation."""
+"""YOLO와 분류기 모델이 학습하기 위한 이미지를 생성하기 위해
+동영상을 프레임단위로  이미지 여러장으로 분해"""
 
 import argparse
 import json

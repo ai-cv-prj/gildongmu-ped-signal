@@ -36,6 +36,7 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(args.color_method, "hsv")
         self.assertEqual(args.classifier_model, "efficientnet_b0")
         self.assertFalse(args.imagenet_pretrained)
+        self.assertFalse(args.allow_untrained_predictions)
         self.assertEqual(args.detector_imgsz, 960)
         self.assertEqual(args.classifier_imgsz, 224)
         self.assertEqual(args.min_crop_size, 6)
@@ -135,6 +136,23 @@ class PipelineTests(unittest.TestCase):
         )
         self.assertEqual(predictions[0]["class_name"], "unknown")
         self.assertEqual(predictions[0]["raw_class_name"], "red")
+
+    def test_untrained_predictions_can_be_shown_for_pipeline_check(self):
+        import torch
+
+        class FixedModel:
+            def __call__(self, batch):
+                return torch.tensor([[5.0, 1.0, 0.0]])
+
+        args = runner.parse_args([
+            "--source", "x.jpg", "--device", "cpu", "--allow-untrained-predictions"
+        ])
+        predictions, _ = runner.run_classifier(
+            FixedModel(), torch.zeros(1, 3, 8, 8), ["red", "green", "unknown"],
+            False, args, torch,
+        )
+        self.assertEqual(predictions[0]["class_name"], "red")
+        self.assertFalse(predictions[0]["trained"])
 
 
 if __name__ == "__main__":

@@ -208,6 +208,25 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 EfficientNet-B0를 확인하려면 `--classifier-model efficientnet_b0`로 바꾸면 됩니다. 최초
 실행에는 torchvision 가중치 다운로드를 위한 인터넷 연결이 필요합니다.
 
+정확도와 무관하게 `red/green/unknown` 출력까지 이어지는지만 확인하려면 다음 옵션을
+추가할 수 있습니다.
+
+```bash
+python parts/traffic_light/benchmark_yolo_classifier.py \
+  --source data/신호등1.mp4 \
+  --device cpu \
+  --color-method neural \
+  --classifier-model mobilenet_v3_small \
+  --imagenet-pretrained \
+  --allow-untrained-predictions \
+  --vid-stride 10 \
+  --max-frames 30
+```
+
+화면에는 `UNTRAINED red`처럼 표시됩니다. ImageNet 백본만 사전학습되었고 3클래스
+출력층은 임의 가중치이므로, 이 결과는 정확도나 색 판별 가능성을 평가하는 데 사용하면
+안 됩니다. 오직 YOLO → crop → 신경망 → 클래스 표시 연결 시험용입니다.
+
 ### 신호등 색으로 학습된 가중치 사용
 
 체크포인트는 다음 형식을 권장합니다.

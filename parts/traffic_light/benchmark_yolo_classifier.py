@@ -77,6 +77,11 @@ def parse_args(argv=None):
         action="store_true",
         help="커스텀 체크포인트 대신 torchvision ImageNet 기본 백본 가중치 사용",
     )
+    parser.add_argument(
+        "--allow-untrained-predictions",
+        action="store_true",
+        help="미학습 3클래스 출력층의 임의 red/green/unknown 결과를 연결 시험용으로 표시",
+    )
     parser.add_argument("--class-names", nargs="+", default=["red", "green", "unknown"])
     parser.add_argument("--device", default="0", help="GPU: 0 또는 cuda:0, CPU: cpu")
     parser.add_argument("--detector-imgsz", type=positive_int, default=960)
@@ -434,7 +439,10 @@ def run_classifier(model, batch, class_names, trained, args, torch):
     scores, indices = probabilities.max(dim=1)
     predictions = []
     for score, index in zip(scores.tolist(), indices.tolist()):
-        raw_class_name = class_names[index] if trained else "untrained_timing_only"
+        show_untrained = not trained and args.allow_untrained_predictions
+        raw_class_name = (
+            class_names[index] if trained or show_untrained else "untrained_timing_only"
+        )
         class_name = (
             raw_class_name
             if not trained or score >= args.classifier_min_confidence
@@ -443,7 +451,8 @@ def run_classifier(model, batch, class_names, trained, args, torch):
         predictions.append({
             "class_name": class_name,
             "raw_class_name": raw_class_name,
-            "confidence": float(score) if trained else None,
+            "confidence": float(score) if trained or show_untrained else None,
+            "trained": trained,
         })
     postprocess_ms = (time.perf_counter() - started) * 1000
     return predictions, {
@@ -491,7 +500,8 @@ def draw_result(frame, detections, timing, cv2):
         x1, y1, x2, y2 = (int(round(value)) for value in detection["xyxy"])
         classification = detection.get("classification")
         if classification and classification["confidence"] is not None:
-            label = f'{classification["class_name"]} {classification["confidence"]:.2f}'
+            prefix = "" if classification.get("trained", True) else "UNTRAINED "
+            label = f'{prefix}{classification["class_name"]} {classification["confidence"]:.2f}'
         elif classification:
             label = "classifier: timing only"
         else:
@@ -542,13 +552,19 @@ def main(argv=None):
     source = resolve_source(args.source)
     device = torch_device(args.device)
     if args.color_method == "hsv" and (
-        args.classifier_weights is not None or args.imagenet_pretrained
+        args.classifier_weights is not None
+        or args.imagenet_pretrained
+        or args.allow_untrained_predictions
     ):
         raise ValueError(
             "분류기 가중치를 사용할 때는 --color-method neural을 함께 지정하세요."
         )
     if args.half and device == "cpu":
         raise ValueError("--half는 CUDA 장치에서만 사용하세요.")
+    if args.allow_untrained_predictions and not args.imagenet_pretrained:
+        raise ValueError(
+            "--allow-untrained-predictions는 --imagenet-pretrained와 함께 사용하세요."
+        )
     try:
         import cv2
         import torch
@@ -590,10 +606,16 @@ def main(argv=None):
                 if args.imagenet_pretrained
                 else "가중치 없음"
             )
-            print(
-                f"분류기 {weight_status}: {args.classifier_model} 속도만 측정하며 "
-                "3클래스 출력층은 미학습 상태라 색 예측은 사용하지 않습니다."
-            )
+            if args.allow_untrained_predictions:
+                print(
+                    f"경고: 분류기 {weight_status}, {args.classifier_model}의 3클래스 출력층은 "
+                    "미학습입니다. 표시되는 UNTRAINED 색은 연결 시험용 임의 결과입니다."
+                )
+            else:
+                print(
+                    f"분류기 {weight_status}: {args.classifier_model} 속도만 측정하며 "
+                    "3클래스 출력층은 미학습 상태라 색 예측은 사용하지 않습니다."
+                )
     else:
         classifier, class_names, trained = None, ["red", "green", "unknown"], False
         print("색 판별: HSV 규칙 기반 (학습 가중치 불필요)")
