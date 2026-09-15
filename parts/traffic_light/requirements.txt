@@ -1,0 +1,5 @@
+# Install the team's CUDA 12.8 torch/torchvision build FIRST (see README).
+# The HTML team rules do not specify an exact Ultralytics version.
+# Capture the resolved environment with pip freeze before sharing experiments.
+ultralytics>=8.4.0,<9
+opencv-python>=4.10,<5
