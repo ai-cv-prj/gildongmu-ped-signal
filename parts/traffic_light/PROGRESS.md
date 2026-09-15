@@ -139,8 +139,8 @@ JSON을 읽어 다음 두 데이터셋을 생성했다. 원본 파일은 수정�
 
 ```text
 전체 crop: 14,522장
-red:       10,713장
-green:      3,809장
+red:       10,712장
+green:      3,810장
 train:     13,594장
 val:          808장
 test:         120장
@@ -188,14 +188,41 @@ MobileNetV3-Small과 EfficientNet-B0를 같은 데이터와 설정으로 학습�
 | checkpoint 크기 | 약 6MB | 약 16MB |
 | 학습시간 | 58.7초 | 108.8초 |
 
-두 모델 모두 validation에서 red 572장 중 1장을 green으로 잘못 분류했고 green 236장은
-모두 맞혔다. test 120장은 모두 맞혔다. 정확도 차이가 없는 상태에서 MobileNet은
-파라미터가 약 62% 적고 학습시간도 약 46% 짧으므로 현재 1순위 모델로 선택한다.
+최초 라벨 기준으로 두 모델 모두 validation에서 red 572장 중 1장을 green으로 분류했고
+green 236장은 모두 맞혔다. test 120장은 모두 맞혔다. 정확도 차이가 없는 상태에서
+MobileNet은 파라미터가 약 62% 적고 학습시간도 약 46% 짧으므로 현재 1순위 모델로
+선택한다.
 
 EfficientNet의 test loss가 더 낮지만 test가 120장뿐이라 실제 환경 우위를 의미한다고
 보기 어렵다. 현재 데이터에는 `unknown`, 역광, 가려짐 및 YOLO 검출 오차가 반영된 crop이
 없으므로 실제 영상에서 두 모델의 추론시간과 오분류를 추가 비교해야 한다. `runs/`의
 체크포인트와 결과 JSON은 Git에 커밋하지 않는다.
+
+### Validation 라벨 오류 수정
+
+두 모델이 공통으로 green으로 분류했던 다음 원본을 확인했다.
+
+```text
+교차로정보 데이터셋_bbox_4/MP_SEL_B002677.jpg
+교차로정보 데이터셋_bbox_4/MP_SEL_B002677.json
+문제 박스: shape 2, [1274.90, 4.45] ~ [1358.26, 158.62]
+```
+
+crop을 육안으로 확인한 결과 초록색 보행 신호였지만 JSON에는 `R_Signal`로 잘못
+기록되어 있었다. 이를 `G_Signal`로 수정하고 분류기 데이터셋 전체를 다시 생성했다.
+수정 후 validation 클래스 수는 green 237장, red 571장이다.
+
+기존 최고 checkpoint로 수정된 crop을 다시 추론한 결과는 다음과 같다.
+
+| 모델 | 예측 | green 확률 |
+|---|---|---:|
+| MobileNetV3-Small | green | 99.895% |
+| EfficientNet-B0 | green | 99.995% |
+
+나머지 807장은 변경되지 않았고 기존 평가에서 모두 정답이었으므로, 수정된 validation
+정답 기준 두 모델의 accuracy와 macro recall은 모두 100%다. 해당 파일은 validation에만
+있어서 학습 가중치를 다시 생성할 필요는 없다. 기존 `comparison.json`은 수정 전 라벨로
+실행한 이력을 보존한다.
 
 ## 5. 아직 필요한 작업
 
