@@ -159,6 +159,141 @@ EfficientNet은 두 `mobilenet_v3_small` 부분을 `efficientnet_b0`로 바꿔 �
 세로가 6픽셀보다 작아도 색 판별을 건너뜁니다. 각각
 `--classifier-min-confidence`, `--min-crop-size`로 조정할 수 있습니다.
 
+## 교차로정보 LabelMe 데이터로 파인튜닝
+
+현재 확인한 원본 폴더는 이미지와 같은 이름의 LabelMe JSON을 함께 가지고 있습니다.
+JSON의 `R_Signal`과 `G_Signal` 박스를 그대로 이용하므로 이 데이터는 다시 직접 라벨링할
+필요가 없습니다. `Zebra_Cross`와 잘못 들어간 `1` 라벨은 자동으로 제외합니다.
+
+아래 명령은 프로젝트 가상환경이 활성화된 상태를 기준으로 합니다. 터미널을 새로 열었다면
+먼저 다음 명령을 실행하고 프롬프트 앞에 `(.venv)`가 표시되는지 확인합니다.
+
+```bash
+cd ~/ai_cv_prj
+source .venv/bin/activate
+```
+
+우선 아래처럼 폴더 단위로 나눕니다. 이는 첫 실험용 분할이며, 최종 성능은 이 데이터와
+겹치지 않는 직접 촬영 영상으로 다시 확인해야 합니다.
+
+```text
+bbox_1, bbox_2 → train
+bbox_3, bbox_4 → val
+bbox_5, bbox_6 → test
+```
+
+### 1. 색 분류기용 crop 생성
+
+원본 LabelMe 박스에서 신호등 부분만 잘라 `red/green` 두 클래스 ImageFolder를 만듭니다.
+이 공개 데이터에는 꺼짐·가려짐을 뜻하는 `unknown` 정답이 없으므로 첫 모델은 2클래스로
+학습하고, 이후 직접 촬영 데이터로 `unknown`을 추가합니다.
+
+```bash
+python parts/traffic_light/prepare_classifier_crops.py \
+  --images "/mnt/c/Users/10/Desktop/2차플젝/(2차_최종) 교차로정보 데이터셋_20210720" \
+  --label-format labelme \
+  --output datasets/intersection_signal_classifier \
+  --class-names red green \
+  --label-map R_Signal=red G_Signal=green \
+  --split-map \
+    "교차로정보 데이터셋_bbox_1=train" \
+    "교차로정보 데이터셋_bbox_2=train" \
+    "교차로정보 데이터셋_bbox_3=val" \
+    "교차로정보 데이터셋_bbox_4=val" \
+    "교차로정보 데이터셋_bbox_5=test" \
+    "교차로정보 데이터셋_bbox_6=test" \
+  --padding 0.10
+```
+
+생성이 끝나면 `datasets/intersection_signal_classifier/summary.json`에서 red/green 수와
+train/val/test 수를 먼저 확인합니다. 출력 폴더가 비어 있지 않으면 안전을 위해 중단하므로
+재실행할 때는 새 출력 경로를 사용하세요.
+
+### 2. MobileNet과 EfficientNet 파인튜닝
+
+처음에는 MobileNet 하나를 5 epoch만 학습해 전체 과정이 정상인지 확인합니다.
+
+```bash
+python parts/traffic_light/train_signal_classifier.py \
+  --data datasets/intersection_signal_classifier \
+  --model mobilenet_v3_small \
+  --epochs 5 \
+  --batch-size 64 \
+  --device 0 \
+  --amp
+```
+
+정상 학습이 확인되면 두 후보를 30 epoch까지 비교합니다.
+
+```bash
+python parts/traffic_light/train_signal_classifier.py \
+  --data datasets/intersection_signal_classifier \
+  --model both \
+  --epochs 30 \
+  --batch-size 64 \
+  --device 0 \
+  --amp
+```
+
+파인튜닝된 분류기 가중치는
+`runs/traffic_light_classifier/<실행ID>/<모델명>/best.pt`에 저장됩니다.
+
+### 3. YOLO용 단일 클래스 데이터 생성
+
+YOLO는 빨강/초록을 구별하지 않고 둘 다 class 0 `pedestrian_signal`로 합칩니다. 신호등이
+없는 사진도 신호등 사진 수의 20%만큼 넣어 배경 오검출을 줄입니다. 기본 `symlink` 방식은
+원본 사진을 복사하지 않아 저장 공간을 아끼며, WSL 안에서 학습할 때 그대로 사용할 수 있습니다.
+
+```bash
+python parts/traffic_light/prepare_yolo_signal_dataset.py \
+  --source "/mnt/c/Users/10/Desktop/2차플젝/(2차_최종) 교차로정보 데이터셋_20210720" \
+  --output datasets/intersection_pedestrian_signal_yolo \
+  --split-map \
+    "교차로정보 데이터셋_bbox_1=train" \
+    "교차로정보 데이터셋_bbox_2=train" \
+    "교차로정보 데이터셋_bbox_3=val" \
+    "교차로정보 데이터셋_bbox_4=val" \
+    "교차로정보 데이터셋_bbox_5=test" \
+    "교차로정보 데이터셋_bbox_6=test" \
+  --negative-ratio 0.20
+```
+
+다른 PC로 데이터셋 폴더 자체를 옮길 계획이면 `--image-mode copy`를 추가합니다. 링크 방식은
+원본 폴더를 이동하거나 삭제하면 끊어집니다.
+
+### 4. YOLO 파인튜닝
+
+먼저 5 epoch 시험 학습을 실행합니다.
+
+```bash
+python parts/traffic_light/train_signal_detector.py \
+  --data datasets/intersection_pedestrian_signal_yolo/data.yaml \
+  --model yolo26s.pt \
+  --epochs 5 \
+  --imgsz 960 \
+  --batch 16 \
+  --device 0
+```
+
+GPU 메모리 부족이 나오면 `--batch 8`, 그래도 부족하면 `--imgsz 640`으로 낮춥니다. 시험이
+정상이라면 `--epochs 30`으로 본 학습합니다. 파인튜닝된 YOLO 가중치는
+`runs/traffic_light_detector/<실행시각>/weights/best.pt`에 저장됩니다.
+
+### 5. 두 파인튜닝 모델 연결
+
+```bash
+python parts/traffic_light/benchmark_yolo_classifier.py \
+  --source data/test.mp4 \
+  --detector runs/traffic_light_detector/<실행시각>/weights/best.pt \
+  --signal-classes pedestrian_signal \
+  --color-method neural \
+  --classifier-model mobilenet_v3_small \
+  --classifier-weights runs/traffic_light_classifier/<실행ID>/mobilenet_v3_small/best.pt
+```
+
+분류기 체크포인트 안에 `class_names: [green, red]`처럼 실제 폴더 정렬 순서가 함께 저장되므로
+추론 시 클래스 순서를 따로 추측할 필요는 없습니다.
+
 ## 처리 속도 측정
 
 사진:
