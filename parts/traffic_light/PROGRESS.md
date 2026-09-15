@@ -166,16 +166,47 @@ test:            45장 /    120 boxes
 없는 배경 사진을 약 20% 포함했다. 이미지는 원본에 대한 심볼릭 링크이며 끊어진 링크는
 0개다. 생성 데이터는 `.gitignore`의 `datasets/` 규칙으로 Git에서 제외한다.
 
-## 4. 아직 필요한 작업
+## 4. 색상 분류기 파인튜닝 결과
 
-1. 분류기와 YOLO를 각각 5 epoch 시험 학습
-2. YOLO 파인튜닝 후 recall과 차량 신호등 오검출 확인
-3. MobileNetV3-Small과 EfficientNet-B0를 같은 split으로 30 epoch 비교
+실행 경로: `runs/traffic_light_classifier/20260915T085300Z_3f63cc9d`
+
+MobileNetV3-Small과 EfficientNet-B0를 같은 데이터와 설정으로 학습했다. 명령에는
+`--epochs 30`을 지정했지만 validation macro recall이 더 이상 개선되지 않아 조기 종료가
+작동했다.
+
+| 항목 | MobileNetV3-Small | EfficientNet-B0 |
+|---|---:|---:|
+| 실제 실행 epoch | 10 | 9 |
+| 최고 checkpoint epoch | 3 | 2 |
+| validation accuracy | 99.876% | 99.876% |
+| validation macro recall | 99.913% | 99.913% |
+| validation 오분류 | 1/808 | 1/808 |
+| test accuracy | 100% | 100% |
+| test macro recall | 100% | 100% |
+| test loss | 0.001497 | 0.000309 |
+| 파라미터 수 | 1,519,906 | 4,010,110 |
+| checkpoint 크기 | 약 6MB | 약 16MB |
+| 학습시간 | 58.7초 | 108.8초 |
+
+두 모델 모두 validation에서 red 572장 중 1장을 green으로 잘못 분류했고 green 236장은
+모두 맞혔다. test 120장은 모두 맞혔다. 정확도 차이가 없는 상태에서 MobileNet은
+파라미터가 약 62% 적고 학습시간도 약 46% 짧으므로 현재 1순위 모델로 선택한다.
+
+EfficientNet의 test loss가 더 낮지만 test가 120장뿐이라 실제 환경 우위를 의미한다고
+보기 어렵다. 현재 데이터에는 `unknown`, 역광, 가려짐 및 YOLO 검출 오차가 반영된 crop이
+없으므로 실제 영상에서 두 모델의 추론시간과 오분류를 추가 비교해야 한다. `runs/`의
+체크포인트와 결과 JSON은 Git에 커밋하지 않는다.
+
+## 5. 아직 필요한 작업
+
+1. YOLO를 5 epoch 시험 학습한 뒤 본 파인튜닝
+2. YOLO recall과 차량 신호등 오검출 확인
+3. 두 분류기 checkpoint를 같은 실제 영상에서 속도·오분류 비교
 4. 직접 촬영 데이터에서 `unknown`(꺼짐·가려짐·판독 불가) 라벨 추가
 5. 공개 데이터와 겹치지 않는 실제 영상으로 최종 평가
 6. 실제 서비스 연결 전에 여러 프레임 연속 확인 및 음성 발화 로직 추가
 
-## 5. 검증 상태
+## 6. 검증 상태
 
-현재 테스트 32개가 모두 통과한다. 현재 실행 환경에서는 CUDA가 비활성 상태라 실제 GPU
-학습과 실제 데이터 정확도는 CUDA가 연결된 환경에서 별도로 측정해야 한다.
+현재 테스트 32개가 모두 통과한다. 분류기 GPU 학습과 validation/test 평가까지 완료했다.
+YOLO 파인튜닝과 실제 영상의 전체 파이프라인 평가는 아직 필요하다.
