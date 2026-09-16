@@ -224,16 +224,89 @@ crop을 육안으로 확인한 결과 초록색 보행 신호였지만 JSON에�
 있어서 학습 가중치를 다시 생성할 필요는 없다. 기존 `comparison.json`은 수정 전 라벨로
 실행한 이력을 보존한다.
 
-## 5. 아직 필요한 작업
+## 5. YOLO 파인튜닝 결과
 
-1. YOLO를 5 epoch 시험 학습한 뒤 본 파인튜닝
-2. YOLO recall과 차량 신호등 오검출 확인
-3. 두 분류기 checkpoint를 같은 실제 영상에서 속도·오분류 비교
+YOLO는 16,302장의 train 이미지와 13,594개의 `pedestrian_signal` 박스로 학습했다.
+먼저 `yolo26s.pt`를 5 epoch 시험 학습한 뒤, 그 실행의 최고 가중치에서 추가 학습했다.
+
+```text
+최초 5 epoch:
+runs/traffic_light_detector/20260915_최초_5epoch
+
+추가 학습:
+runs/traffic_light_detector/20260916_추가학습
+```
+
+추가 학습은 25 epoch를 지정했으나 15 epoch에서 최고점을 기록한 뒤 성능이 개선되지 않아
+patience 7에 따라 22 epoch에서 조기 종료됐다. 실제 추론에는 `last.pt`가 아니라 다음
+가중치를 사용한다.
+
+```text
+runs/traffic_light_detector/20260916_추가학습/weights/best.pt
+```
+
+동일한 validation split과 `imgsz=960`으로 파인튜닝 전후를 다시 평가한 결과는 다음과 같다.
+
+| 항목 | 파인튜닝 전 | 파인튜닝 후 | 변화 |
+|---|---:|---:|---:|
+| Precision | 36.66% | 91.36% | +54.70%p |
+| Recall | 55.32% | 90.31% | +34.99%p |
+| mAP50 | 32.93% | 93.22% | +60.29%p |
+| mAP50-95 | 17.63% | 67.60% | +49.97%p |
+
+파인튜닝 후 F1은 약 90.83%다. validation F1-confidence 곡선은 confidence 약 0.378에서
+최고점을 보였으므로 실제 영상의 첫 기준은 `--conf 0.38`로 정한다. 미탐이 중요하면
+0.25까지 낮추고 오탐과 함께 다시 비교한다.
+
+결과 기록용 핵심 파일은 추가 학습 폴더의 `weights/best.pt`와 `weights/results.csv`다.
+`runs/`는 Git에서 제외되므로 체크포인트와 실행 결과는 별도로 보관한다.
+
+## 6. 실제 영상 통합 테스트
+
+최종 후보는 파인튜닝한 단일 클래스 YOLO와 MobileNetV3-Small이다.
+
+```text
+YOLO:
+runs/traffic_light_detector/20260916_추가학습/weights/best.pt
+
+색상 분류기:
+runs/traffic_light_classifier/20260915T085300Z_3f63cc9d/
+  mobilenet_v3_small/best.pt
+```
+
+첫 실영상은 기존 학습 데이터와 다른 `신호등1.mp4`로 정하고, 우선 300프레임을 처리해
+검출 박스와 red/green 예측이 정상적으로 연결되는지 확인한다.
+
+```bash
+.venv/bin/python parts/traffic_light/benchmark_yolo_classifier.py \
+  --source "/mnt/c/Users/10/Desktop/2차플젝/yolo 객체 탐지 분류기 모델 속도/신호등 원본 동영상/신호등1.mp4" \
+  --detector runs/traffic_light_detector/20260916_추가학습/weights/best.pt \
+  --signal-classes pedestrian_signal \
+  --color-method neural \
+  --classifier-model mobilenet_v3_small \
+  --classifier-weights \
+    runs/traffic_light_classifier/20260915T085300Z_3f63cc9d/mobilenet_v3_small/best.pt \
+  --device 0 \
+  --detector-imgsz 960 \
+  --conf 0.38 \
+  --half \
+  --max-frames 300
+```
+
+결과 폴더에는 표시 영상 `result.mp4`, 프레임별 탐지·색상 결과 `frames.jsonl`, 실행 설정
+`config.json`, 속도 요약 `summary.json`이 저장된다. 실제 정확도 평가는 영상의 정답 라벨이
+없으므로 결과 영상을 육안 확인하고 오탐·미탐·색상 오분류 프레임을 별도로 기록해야 한다.
+
+## 7. 아직 필요한 작업
+
+1. MobileNet과 YOLO를 연결해 `신호등1.mp4` 300프레임 시험
+2. 결과 영상에서 YOLO 미탐·오탐과 red/green 오분류 확인
+3. 정상 동작 확인 후 원본 영상 5개 전체 처리 및 영상별 속도 비교
 4. 직접 촬영 데이터에서 `unknown`(꺼짐·가려짐·판독 불가) 라벨 추가
-5. 공개 데이터와 겹치지 않는 실제 영상으로 최종 평가
-6. 실제 서비스 연결 전에 여러 프레임 연속 확인 및 음성 발화 로직 추가
+5. 실제 서비스 연결 전에 여러 프레임 연속 확인 및 음성 발화 로직 추가
 
-## 6. 검증 상태
+## 8. 검증 상태
 
 현재 테스트 32개가 모두 통과한다. 분류기 GPU 학습과 validation/test 평가까지 완료했다.
-YOLO 파인튜닝과 실제 영상의 전체 파이프라인 평가는 아직 필요하다.
+YOLO 파인튜닝과 validation 평가는 완료했다. 최종 MobileNet과 YOLO를 연결한 실제 영상의
+전체 파이프라인 평가는 아직 필요하다.
