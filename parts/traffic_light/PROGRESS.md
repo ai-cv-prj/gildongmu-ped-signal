@@ -118,7 +118,6 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
   --source data/test.mp4 \
   --detector weights/yolo_pedestrian_signal.pt \
   --signal-classes pedestrian_signal \
-  --color-method neural \
   --classifier-model mobilenet_v3_small \
   --classifier-weights runs/traffic_light_classifier/<실행ID>/mobilenet_v3_small/best.pt \
   --no-save-media
@@ -283,7 +282,6 @@ runs/traffic_light_classifier/20260915T085300Z_3f63cc9d/
   --source "/mnt/c/Users/10/Desktop/2차플젝/yolo 객체 탐지 분류기 모델 속도/신호등 원본 동영상/신호등1.mp4" \
   --detector runs/traffic_light_detector/20260916_추가학습/weights/best.pt \
   --signal-classes pedestrian_signal \
-  --color-method neural \
   --classifier-model mobilenet_v3_small \
   --classifier-weights \
     runs/traffic_light_classifier/20260915T085300Z_3f63cc9d/mobilenet_v3_small/best.pt \
@@ -330,6 +328,6 @@ confidence는 최대 66.24%였다. 같은 구간의 실제 빨간 신호등은 �
 
 ## 8. 검증 상태
 
-현재 테스트 32개가 모두 통과한다. 분류기 GPU 학습과 validation/test 평가까지 완료했다.
+현재 테스트 29개가 모두 통과한다. 분류기 GPU 학습과 validation/test 평가까지 완료했다.
 YOLO 파인튜닝과 validation 평가를 완료했고, 최종 MobileNet과 YOLO를 연결한 실제 영상
 4건의 실행 및 속도 측정도 완료했다. 정답 라벨 기반 실영상 정확도 평가는 아직 필요하다.

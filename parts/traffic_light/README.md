@@ -6,32 +6,14 @@
 원본 프레임
   → YOLO26s: 신호등 박스 검출
   → 박스에 여백 추가 및 crop
-  → HSV 규칙 기반 또는 학습된 MobileNetV3-Small/EfficientNet-B0로 빨강/초록/구분 불가 판별
+  → 학습된 MobileNetV3-Small/EfficientNet-B0로 빨강/초록/구분 불가 판별
 ```
 
-기본 `--color-method hsv`는 별도 학습 없이 바로 색을 시험할 수 있습니다. YOLO 기본
-가중치는 COCO의 일반 `traffic light` 위치를 사용합니다. 작은 신호등, 역광, 색 번짐이
-심한 환경에서 정확도를 높이려면 라벨 데이터로 신경망 분류기를 학습해 사용하세요.
+색 판별에는 학습된 신경망 분류기를 사용합니다. YOLO 기본 가중치는 COCO의 일반
+`traffic light` 위치를 사용합니다. 작은 신호등, 역광, 색 번짐이 심한 환경에서는
+라벨 데이터로 파인튜닝한 검출기와 분류기를 사용하세요.
 COCO `traffic light`는 차량 신호등도 포함하므로 최종 시스템에서는
 `pedestrian_signal` 단일 클래스로 파인튜닝한 YOLO 가중치를 권장합니다.
-
-## 학습 없이 바로 색 구분 테스트
-
-CPU에서 영상 일부를 먼저 확인합니다.
-
-```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
-  --source data/신호등1.mp4 \
-  --device cpu \
-  --color-method hsv \
-  --vid-stride 10 \
-  --max-frames 30
-```
-
-결과 영상의 박스 위에는 `red`, `green`, `unknown` 세 결과만 표시됩니다. 노란색이나
-다른 색은 `unknown`(구분 불가)으로 처리합니다. 색 픽셀이 너무 적어 `unknown`이 자주 나오면
-`--hsv-min-color-ratio 0.005`처럼 낮춰 비교할 수 있습니다. 반대로 주변 간판 색을
-잘못 읽으면 값을 높이세요. 원시 색 비율은 `frames.jsonl`의 `color_ratios`에 남습니다.
 
 ## 설치
 
@@ -128,7 +110,7 @@ python parts/traffic_light/train_signal_classifier.py \
 
 각 실행은 `runs/traffic_light_classifier/<실행ID>/`에 생성됩니다.
 
-- `mobilenet_v3_small/best.pt`, `efficientnet_b0/best.pt`: 최고 val accuracy 체크포인트
+- `mobilenet_v3_small/best.pt`, `efficientnet_b0/best.pt`: 최고 val macro recall 체크포인트
 - 각 모델의 `history.json`, `result.json`: epoch별/최종 결과
 - `comparison.json`: 두 모델의 accuracy, macro recall, confusion matrix, 파라미터 수와 학습시간 비교
 
@@ -145,7 +127,6 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
   --detector weights/yolo_pedestrian_signal_best.pt \
   --signal-classes pedestrian_signal \
-  --color-method neural \
   --classifier-model mobilenet_v3_small \
   --classifier-weights runs/traffic_light_classifier/<실행ID>/mobilenet_v3_small/best.pt \
   --no-save-media
@@ -286,7 +267,6 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
   --source data/test.mp4 \
   --detector runs/traffic_light_detector/<실행시각>/weights/best.pt \
   --signal-classes pedestrian_signal \
-  --color-method neural \
   --classifier-model mobilenet_v3_small \
   --classifier-weights runs/traffic_light_classifier/<실행ID>/mobilenet_v3_small/best.pt
 ```
@@ -300,7 +280,9 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 
 ```bash
 python parts/traffic_light/benchmark_yolo_classifier.py \
-  --source data/signal.jpg --color-method hsv
+  --source data/signal.jpg \
+  --classifier-model mobilenet_v3_small \
+  --classifier-weights weights/mobilenet_v3_small_signal.pt
 ```
 
 영상 100개 처리 프레임:
@@ -308,7 +290,8 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 ```bash
 python parts/traffic_light/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
-  --color-method hsv \
+  --classifier-model mobilenet_v3_small \
+  --classifier-weights weights/mobilenet_v3_small_signal.pt \
   --vid-stride 3 \
   --max-frames 100 \
   --no-save-media
@@ -332,7 +315,6 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 python parts/traffic_light/benchmark_yolo_classifier.py \
   --source data/신호등1.mp4 \
   --device cpu \
-  --color-method neural \
   --classifier-model mobilenet_v3_small \
   --imagenet-pretrained \
   --vid-stride 30 \
@@ -350,7 +332,6 @@ EfficientNet-B0를 확인하려면 `--classifier-model efficientnet_b0`로 바�
 python parts/traffic_light/benchmark_yolo_classifier.py \
   --source data/신호등1.mp4 \
   --device cpu \
-  --color-method neural \
   --classifier-model mobilenet_v3_small \
   --imagenet-pretrained \
   --allow-untrained-predictions \
@@ -381,7 +362,6 @@ torch.save(
 ```bash
 python parts/traffic_light/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
-  --color-method neural \
   --classifier-model efficientnet_b0 \
   --classifier-weights weights/efficientnet_b0_signal.pt \
   --vid-stride 3 \
@@ -395,7 +375,6 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 ```bash
 python parts/traffic_light/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
-  --color-method neural \
   --classifier-model efficientnet_b0 \
   --classifier-weights weights/efficientnet_b0_signal.pt \
   --class-names green red unknown
@@ -407,7 +386,6 @@ YOLO도 보행자 신호등 위치에 파인튜닝했다면 바꿔서 실행할 
 python parts/traffic_light/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
   --detector weights/yolo_signal_best.pt \
-  --color-method neural \
   --classifier-model efficientnet_b0 \
   --classifier-weights weights/efficientnet_b0_signal.pt
 ```
@@ -416,7 +394,7 @@ FP16 실행:
 
 ```bash
 python parts/traffic_light/benchmark_yolo_classifier.py \
-  --source data/walk.mp4 --color-method neural \
+  --source data/walk.mp4 \
   --classifier-weights weights/efficientnet_b0_signal.pt \
   --max-frames 300 --half --no-save-media
 ```
@@ -435,9 +413,9 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 | 항목 | 포함 범위 |
 |---|---|
 | `detector_pipeline_wall` | YOLO 전처리·추론·후처리 |
-| `crop_preprocess` | 박스 확장·crop (신경망 모드는 224×224 패딩·정규화·배치 생성 포함) |
+| `crop_preprocess` | 박스 확장·crop 및 224×224 패딩·정규화·배치 생성 |
 | `classifier_input_transfer` | 분류기 배치를 CPU에서 선택한 장치로 전송 |
-| `classifier_inference` | 한 프레임의 HSV 판별 전체 또는 신경망 배치 forward |
+| `classifier_inference` | 한 프레임에 검출된 모든 crop의 신경망 배치 forward |
 | `classifier_postprocess` | softmax와 최고 클래스 선택 |
 | `total_pipeline_wall` | YOLO 시작부터 분류 결과 생성까지 |
 

@@ -33,7 +33,6 @@ class PipelineTests(unittest.TestCase):
         args = runner.parse_args(["--source", "x.jpg"])
         self.assertEqual(args.detector, "yolo26s.pt")
         self.assertIn("traffic light", args.signal_classes)
-        self.assertEqual(args.color_method, "hsv")
         self.assertEqual(args.classifier_model, "efficientnet_b0")
         self.assertFalse(args.imagenet_pretrained)
         self.assertFalse(args.allow_untrained_predictions)
@@ -43,42 +42,10 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(args.classifier_min_confidence, 0.60)
         self.assertEqual(args.class_names, ["red", "green", "unknown"])
 
-    def test_hsv_color_classifier(self):
-        import cv2
-        import numpy as np
-
-        args = runner.parse_args(["--source", "x.jpg"])
-        bgr_colors = {
-            "red": (0, 0, 255),
-            "green": (0, 255, 0),
-            "unknown": (40, 40, 40),
-        }
-        for expected, bgr in bgr_colors.items():
-            with self.subTest(expected=expected):
-                crop = np.full((20, 12, 3), bgr, dtype=np.uint8)
-                result = runner.classify_hsv_crop(crop, args, cv2)
-                self.assertEqual(result["class_name"], expected)
-                self.assertEqual(result["method"], "hsv")
-
-    def test_hsv_yellow_is_unknown(self):
-        import cv2
-        import numpy as np
-
-        args = runner.parse_args(["--source", "x.jpg"])
-        yellow = np.full((20, 12, 3), (0, 255, 255), dtype=np.uint8)
-        result = runner.classify_hsv_crop(yellow, args, cv2)
-        self.assertEqual(result["class_name"], "unknown")
-
     def test_probability_rejects_nonfinite(self):
         for value in ("-0.1", "1.1", "nan", "inf"):
             with self.assertRaises(runner.argparse.ArgumentTypeError):
                 runner.probability(value)
-
-    def test_hsv_threshold_validation(self):
-        with self.assertRaises(runner.argparse.ArgumentTypeError):
-            runner.positive_probability("0")
-        with self.assertRaises(runner.argparse.ArgumentTypeError):
-            runner.uint8_value("256")
 
     def test_device_validation(self):
         self.assertEqual(runner.torch_device("0"), "cuda:0")

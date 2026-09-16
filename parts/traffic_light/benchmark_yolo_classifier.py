@@ -37,20 +37,6 @@ def probability(value):
     return value
 
 
-def positive_probability(value):
-    value = probability(value)
-    if value == 0:
-        raise argparse.ArgumentTypeError("0보다 크고 1 이하인 값을 입력하세요.")
-    return value
-
-
-def uint8_value(value):
-    value = int(value)
-    if not 0 <= value <= 255:
-        raise argparse.ArgumentTypeError("0~255 사이의 정수가 필요합니다.")
-    return value
-
-
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, help="사진/영상/폴더 경로 또는 웹캠 번호(0)")
@@ -58,12 +44,6 @@ def parse_args(argv=None):
     parser.add_argument(
         "--signal-classes", nargs="+", default=sorted(SIGNAL_NAMES),
         help="YOLO 결과 중 신호등으로 받아들일 class 이름",
-    )
-    parser.add_argument(
-        "--color-method",
-        choices=["hsv", "neural"],
-        default="hsv",
-        help="색 판별 방식: 학습 없이 바로 쓰는 hsv 또는 체크포인트가 필요한 neural",
     )
     parser.add_argument(
         "--classifier-model",
@@ -95,14 +75,6 @@ def parse_args(argv=None):
     parser.add_argument(
         "--classifier-min-confidence", type=probability, default=0.60,
         help="신경망 최고 확률이 이 값보다 낮으면 unknown 처리",
-    )
-    parser.add_argument("--hsv-min-saturation", type=uint8_value, default=55)
-    parser.add_argument("--hsv-min-value", type=uint8_value, default=80)
-    parser.add_argument(
-        "--hsv-min-color-ratio",
-        type=positive_probability,
-        default=0.01,
-        help="crop 전체에서 유효 색 픽셀이 차지해야 하는 최소 비율",
     )
     parser.add_argument("--vid-stride", type=positive_int, default=1)
     parser.add_argument("--max-frames", type=positive_int)
@@ -341,79 +313,6 @@ def prepare_crops(frame, detections, args, cv2, torch):
     return (batch - mean) / std, selected
 
 
-def classify_hsv_crop(crop, args, cv2):
-    """Classify a cropped signal using bright, saturated HSV pixels.
-
-    The returned confidence is a heuristic dominance score, not a calibrated
-    neural-network probability. Extra ratios are kept for threshold tuning.
-    """
-    hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
-    hue = hsv[:, :, 0]
-    saturation = hsv[:, :, 1]
-    value = hsv[:, :, 2]
-    valid = (saturation >= args.hsv_min_saturation) & (value >= args.hsv_min_value)
-    candidate_masks = {
-        "red": valid & ((hue <= 12) | (hue >= 165)),
-        "green": valid & (hue >= 39) & (hue <= 95),
-    }
-    rejected_mask = valid & (hue >= 13) & (hue <= 38)
-    pixel_count = max(int(hue.size), 1)
-    ratios = {
-        name: float(mask.sum()) / pixel_count
-        for name, mask in candidate_masks.items()
-    }
-    rejected_ratio = float(rejected_mask.sum()) / pixel_count
-    dominant_name = max(ratios, key=ratios.get)
-    dominant_ratio = ratios[dominant_name]
-    color_ratio = sum(ratios.values()) + rejected_ratio
-
-    if dominant_ratio < args.hsv_min_color_ratio or rejected_ratio >= dominant_ratio:
-        class_name = "unknown"
-        if rejected_ratio >= dominant_ratio and rejected_ratio > 0:
-            confidence = rejected_ratio / max(rejected_ratio + dominant_ratio, 1e-12)
-        else:
-            confidence = max(
-                0.0,
-                1.0 - dominant_ratio / max(args.hsv_min_color_ratio, 1e-12),
-            )
-    else:
-        class_name = dominant_name
-        confidence = dominant_ratio / max(color_ratio, 1e-12)
-    return {
-        "class_name": class_name,
-        "confidence": float(confidence),
-        "color_pixel_ratio": float(color_ratio),
-        "color_ratios": ratios,
-        "rejected_color_ratio": rejected_ratio,
-        "method": "hsv",
-    }
-
-
-def run_hsv_classifier(frame, detections, args, cv2):
-    height, width = frame.shape[:2]
-    predictions, selected = [], []
-    started = time.perf_counter()
-    crops = []
-    for detection in detections:
-        x1, y1, x2, y2 = expanded_box(detection["xyxy"], width, height, args.crop_padding)
-        if x2 - x1 < args.min_crop_size or y2 - y1 < args.min_crop_size:
-            continue
-        crops.append(frame[y1:y2, x1:x2])
-        selected.append(detection)
-    crop_ms = (time.perf_counter() - started) * 1000
-
-    started = time.perf_counter()
-    for crop in crops:
-        predictions.append(classify_hsv_crop(crop, args, cv2))
-    inference_ms = (time.perf_counter() - started) * 1000
-    return predictions, selected, {
-        "crop_preprocess": crop_ms,
-        "classifier_input_transfer": 0.0,
-        "classifier_inference": inference_ms,
-        "classifier_postprocess": 0.0,
-    }
-
-
 def run_classifier(model, batch, class_names, trained, args, torch):
     if batch is None:
         return [], {
@@ -467,19 +366,13 @@ def run_pipeline(detector, classifier, class_names, trained, frame, args, torch,
     result, timing = run_detector(detector, frame, args, torch)
     detections = extract_signal_detections(result, args.signal_classes)
 
-    if args.color_method == "hsv":
-        predictions, classified_detections, classifier_timing = run_hsv_classifier(
-            frame, detections, args, cv2
-        )
-        timing.update(classifier_timing)
-    else:
-        started = time.perf_counter()
-        batch, classified_detections = prepare_crops(frame, detections, args, cv2, torch)
-        timing["crop_preprocess"] = (time.perf_counter() - started) * 1000
-        predictions, classifier_timing = run_classifier(
-            classifier, batch, class_names, trained, args, torch
-        )
-        timing.update(classifier_timing)
+    started = time.perf_counter()
+    batch, classified_detections = prepare_crops(frame, detections, args, cv2, torch)
+    timing["crop_preprocess"] = (time.perf_counter() - started) * 1000
+    predictions, classifier_timing = run_classifier(
+        classifier, batch, class_names, trained, args, torch
+    )
+    timing.update(classifier_timing)
     for detection, prediction in zip(classified_detections, predictions):
         detection["classification"] = prediction
     synchronize(torch, torch_device(args.device))
@@ -551,14 +444,6 @@ def main(argv=None):
         raise ValueError("--signal-classes를 하나 이상 입력하세요.")
     source = resolve_source(args.source)
     device = torch_device(args.device)
-    if args.color_method == "hsv" and (
-        args.classifier_weights is not None
-        or args.imagenet_pretrained
-        or args.allow_untrained_predictions
-    ):
-        raise ValueError(
-            "분류기 가중치를 사용할 때는 --color-method neural을 함께 지정하세요."
-        )
     if args.half and device == "cpu":
         raise ValueError("--half는 CUDA 장치에서만 사용하세요.")
     if args.allow_untrained_predictions and not args.imagenet_pretrained:
@@ -595,30 +480,26 @@ def main(argv=None):
             "주의: YOLO가 이미 색 클래스를 출력하고 있습니다. 위치 검출은 pedestrian_signal "
             "단일 클래스로 합치고 색은 분류기에 맡기면 역할 중복을 줄일 수 있습니다."
         )
-    if args.color_method == "neural":
-        from torchvision import models
-        classifier, class_names, trained = load_classifier(args, torch, models)
-        if trained:
-            print(f"분류기 가중치: {args.classifier_weights} / 클래스: {class_names}")
-        else:
-            weight_status = (
-                "ImageNet 사전학습 백본 사용"
-                if args.imagenet_pretrained
-                else "가중치 없음"
-            )
-            if args.allow_untrained_predictions:
-                print(
-                    f"경고: 분류기 {weight_status}, {args.classifier_model}의 3클래스 출력층은 "
-                    "미학습입니다. 표시되는 UNTRAINED 색은 연결 시험용 임의 결과입니다."
-                )
-            else:
-                print(
-                    f"분류기 {weight_status}: {args.classifier_model} 속도만 측정하며 "
-                    "3클래스 출력층은 미학습 상태라 색 예측은 사용하지 않습니다."
-                )
+    from torchvision import models
+    classifier, class_names, trained = load_classifier(args, torch, models)
+    if trained:
+        print(f"분류기 가중치: {args.classifier_weights} / 클래스: {class_names}")
     else:
-        classifier, class_names, trained = None, ["red", "green", "unknown"], False
-        print("색 판별: HSV 규칙 기반 (학습 가중치 불필요)")
+        weight_status = (
+            "ImageNet 사전학습 백본 사용"
+            if args.imagenet_pretrained
+            else "가중치 없음"
+        )
+        if args.allow_untrained_predictions:
+            print(
+                f"경고: 분류기 {weight_status}, {args.classifier_model}의 3클래스 출력층은 "
+                "미학습입니다. 표시되는 UNTRAINED 색은 연결 시험용 임의 결과입니다."
+            )
+        else:
+            print(
+                f"분류기 {weight_status}: {args.classifier_model} 속도만 측정하며 "
+                "3클래스 출력층은 미학습 상태라 색 예측은 사용하지 않습니다."
+            )
 
     run_name = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "_" + uuid4().hex[:8]
     output = args.output.expanduser().resolve() / run_name
@@ -635,7 +516,7 @@ def main(argv=None):
         "classifier_class_names": class_names,
         "classifier_trained": trained,
         "classifier_imagenet_pretrained": args.imagenet_pretrained,
-        "color_method": args.color_method,
+        "color_method": "neural",
     }
     (output / "config.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -652,13 +533,12 @@ def main(argv=None):
                     print(f"검출기 워밍업 {args.warmup}회 (측정 제외)")
                     for _ in range(args.warmup):
                         run_detector(detector, frame, args, torch)
-                    if args.color_method == "neural":
-                        print(f"분류기 워밍업 {args.warmup}회 (측정 제외)")
-                        dummy_batch = torch.zeros(
-                            (1, 3, args.classifier_imgsz, args.classifier_imgsz), dtype=torch.float32
-                        )
-                        for _ in range(args.warmup):
-                            run_classifier(classifier, dummy_batch, class_names, trained, args, torch)
+                    print(f"분류기 워밍업 {args.warmup}회 (측정 제외)")
+                    dummy_batch = torch.zeros(
+                        (1, 3, args.classifier_imgsz, args.classifier_imgsz), dtype=torch.float32
+                    )
+                    for _ in range(args.warmup):
+                        run_classifier(classifier, dummy_batch, class_names, trained, args, torch)
                 detections, timing = run_pipeline(
                     detector, classifier, class_names, trained, frame, args, torch, cv2
                 )
@@ -721,11 +601,9 @@ def main(argv=None):
         summary["status"] = status
         summary["classifier_trained"] = trained
         summary["classifier_imagenet_pretrained"] = args.imagenet_pretrained
-        summary["color_method"] = args.color_method
+        summary["color_method"] = "neural"
         summary["classifier_timing_scope"] = (
-            "all HSV crop classifications in a frame"
-            if args.color_method == "hsv"
-            else "one batched forward pass for all detected signals in a frame"
+            "one batched forward pass for all detected signals in a frame"
         )
         summary["accuracy_available"] = False
         summary["accuracy_note"] = "정답 라벨 평가가 아니며 처리시간 측정 결과입니다."
