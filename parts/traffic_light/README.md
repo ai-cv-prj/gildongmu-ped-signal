@@ -35,7 +35,7 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 
 ## 설치
 
-팀 Python 3.11 가상환경과 CUDA 12.8 PyTorch를 먼저 준비합니다.
+팀 Python 3.14.4 가상환경과 CUDA 12.8 PyTorch를 먼저 준비합니다.
 
 ```bash
 cd ~/ai_cv_prj
