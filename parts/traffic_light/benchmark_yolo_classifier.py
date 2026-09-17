@@ -415,7 +415,8 @@ def run_pipeline(detector, classifier, class_names, trained, frame, args, torch,
     if selector:
         index = association.get("signal_index")
         classification = detections[index].get("classification") if index is not None else None
-        if association.get("status") != "matched" and selected_index is not None:
+        if association.get("status") not in {"matched", "single_signal"} \
+                and selected_index is not None:
             detections[selected_index]["classification"] = {
                 "class_name": "unknown", "raw_class_name": "unknown",
                 "confidence": None, "trained": False,
@@ -423,14 +424,17 @@ def run_pipeline(detector, classifier, class_names, trained, frame, args, torch,
             classification = None
         association["color"] = (
             classification["class_name"]
-            if association["status"] == "matched" and classification
+            if association["status"] in {"matched", "single_signal"} and classification
             and classification.get("trained") and classification["class_name"] in {"red", "green"}
             else "unknown"
         )
     synchronize(torch, torch_device(args.device))
     timing["total_pipeline_wall"] = (time.perf_counter() - pipeline_started) * 1000
     if selector:
-        visible = [detections[index]] if association.get("status") == "matched" and index is not None else []
+        visible = (
+            [detections[index]] if association.get("status") in {"matched", "single_signal"}
+            and index is not None else []
+        )
         # Keep the provisional candidate visible only as an explicit unknown,
         # so the user never hears or sees an unconfirmed color.
         if not visible and selected_index is not None:
@@ -499,6 +503,10 @@ def summarize(records):
     summary["detected_crosswalks"] = sum(len(record.get("crosswalks", [])) for record in records)
     summary["matched_frames"] = sum(
         record.get("association", {}).get("status") == "matched" for record in records
+        if record.get("association")
+    )
+    summary["single_signal_frames"] = sum(
+        record.get("association", {}).get("status") == "single_signal" for record in records
         if record.get("association")
     )
     classified_frames = [record for record in records if any("classification" in item for item in record["detections"])]

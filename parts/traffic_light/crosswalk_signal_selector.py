@@ -96,15 +96,20 @@ def associate(frame, signals, crosswalks, cv2):
     height, width = frame.shape[:2]
     decision = {"status": "unknown", "reason": None, "crosswalk_index": None,
                 "signal_index": None, "vanishing_point": None, "candidates": []}
+    if not signals:
+        decision["reason"] = "no_signal_detected"
+        return decision
+    if len(signals) == 1:
+        decision["status"] = "single_signal"
+        decision["reason"] = "crosswalk_relation_unverified"
+        decision["signal_index"] = 0
+        return decision
     crosswalk_index = choose_near_crosswalk(crosswalks, width, height)
     if crosswalk_index is None:
         decision["reason"] = "no_unambiguous_near_crosswalk"
         return decision
     decision["crosswalk_index"] = crosswalk_index
     crosswalk = crosswalks[crosswalk_index]
-    if not signals:
-        decision["reason"] = "no_signal_detected"
-        return decision
     vp = estimate_vanishing_point(frame, crosswalk["xyxy"], cv2)
     if vp is None:
         decision["reason"] = "vanishing_point_unavailable"
@@ -154,6 +159,11 @@ class TemporalSelector:
 
     def update(self, decision, signals, crosswalks):
         index = decision["signal_index"]
+        if decision["status"] == "single_signal":
+            self.last_box = None
+            self.last_crosswalk = None
+            self.streak = 0
+            return decision
         if decision["status"] != "candidate" or index is None:
             self.last_box = None
             self.last_crosswalk = None

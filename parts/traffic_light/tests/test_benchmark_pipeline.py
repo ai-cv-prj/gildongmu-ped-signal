@@ -94,6 +94,20 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(decision["status"], "candidate")
         self.assertEqual(decision["signal_index"], 0)
 
+    def test_one_signal_is_selected_without_crosswalk_geometry(self):
+        import numpy as np
+        from crosswalk_signal_selector import TemporalSelector, associate
+
+        signals = [{"xyxy": [490, 180, 510, 230]}]
+        with patch("crosswalk_signal_selector.estimate_vanishing_point") as estimate:
+            decision = associate(np.zeros((1000, 1000, 3), dtype=np.uint8), signals, [], None)
+        estimate.assert_not_called()
+        self.assertEqual(decision["status"], "single_signal")
+        self.assertEqual(decision["signal_index"], 0)
+        self.assertEqual(decision["reason"], "crosswalk_relation_unverified")
+        self.assertEqual(TemporalSelector(3).update(decision, signals, [])["status"],
+                         "single_signal")
+
     def test_ambiguous_or_missing_geometry_is_unknown(self):
         import numpy as np
         from crosswalk_signal_selector import associate
@@ -199,6 +213,32 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(len(visible), 1)
         self.assertEqual(visible[0]["xyxy"], signals[1]["xyxy"])
         self.assertEqual(association["status"], "matched")
+
+    def test_single_signal_pipeline_classifies_without_crosswalk(self):
+        import numpy as np
+        import torch
+        from crosswalk_signal_selector import TemporalSelector
+
+        args = runner.parse_args(["--source", "x.jpg", "--device", "cpu", "--associate-crosswalk"])
+        signal = {"class_name": "pedestrian_signal", "xyxy": [490, 180, 510, 230]}
+        timing = {"detector_pipeline_wall": 0.0}
+        with patch.object(runner, "run_detector", return_value=(object(), timing)), \
+             patch.object(runner, "extract_signal_detections", return_value=[signal]), \
+             patch.object(runner, "extract_crosswalk_detections", return_value=[]), \
+             patch.object(runner, "prepare_crops", return_value=(torch.zeros(1, 3, 8, 8), [signal])), \
+             patch.object(runner, "run_classifier", return_value=([{
+                 "class_name": "green", "confidence": 0.99, "trained": True,
+             }], {"classifier_input_transfer": 0.0, "classifier_inference": 0.0,
+                 "classifier_postprocess": 0.0})):
+            visible, crosswalks, decision, _ = runner.run_pipeline(
+                object(), object(), ["green", "red"], True,
+                np.zeros((1000, 1000, 3), dtype=np.uint8), args, torch, object(),
+                TemporalSelector(3),
+            )
+        self.assertEqual(len(visible), 1)
+        self.assertEqual(crosswalks, [])
+        self.assertEqual(decision["status"], "single_signal")
+        self.assertEqual(decision["color"], "green")
 
     def test_summary_separates_empty_classifier_frames(self):
         timing = {
