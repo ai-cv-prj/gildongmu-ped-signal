@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 
 spec = importlib.util.spec_from_file_location(
-    "train_signal_detector", Path(__file__).parents[1] / "train_signal_detector.py"
+    "train_signal_detector", Path(__file__).parents[1] / "tools" / "train_signal_detector.py"
 )
 trainer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(trainer)

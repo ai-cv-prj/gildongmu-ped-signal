@@ -5,11 +5,11 @@ import sys
 import unittest
 from unittest.mock import patch
 
-sys.path.insert(0, str(Path(__file__).parents[1]))
+sys.path.insert(0, str(Path(__file__).parents[1] / "runtime"))
 
 
 spec = importlib.util.spec_from_file_location(
-    "benchmark_pipeline", Path(__file__).parents[1] / "benchmark_yolo_classifier.py"
+    "traffic_pipeline", Path(__file__).parents[1] / "runtime" / "pipeline.py"
 )
 runner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(runner)
@@ -81,7 +81,7 @@ class PipelineTests(unittest.TestCase):
 
     def test_association_uses_direction_before_size(self):
         import numpy as np
-        from crosswalk_signal_selector import associate
+        from association import associate
 
         frame = np.zeros((1000, 1000, 3), dtype=np.uint8)
         crossing = [{"xyxy": [300, 350, 700, 1000]}]
@@ -89,17 +89,17 @@ class PipelineTests(unittest.TestCase):
             {"xyxy": [490, 180, 510, 230]},
             {"xyxy": [640, 100, 760, 300]},
         ]
-        with patch("crosswalk_signal_selector.estimate_vanishing_point", return_value=[500, 300]):
+        with patch("association.estimate_vanishing_point", return_value=[500, 300]):
             decision = associate(frame, signals, crossing, None)
         self.assertEqual(decision["status"], "candidate")
         self.assertEqual(decision["signal_index"], 0)
 
     def test_one_signal_is_selected_without_crosswalk_geometry(self):
         import numpy as np
-        from crosswalk_signal_selector import TemporalSelector, associate
+        from association import TemporalSelector, associate
 
         signals = [{"xyxy": [490, 180, 510, 230]}]
-        with patch("crosswalk_signal_selector.estimate_vanishing_point") as estimate:
+        with patch("association.estimate_vanishing_point") as estimate:
             decision = associate(np.zeros((1000, 1000, 3), dtype=np.uint8), signals, [], None)
         estimate.assert_not_called()
         self.assertEqual(decision["status"], "single_signal")
@@ -110,32 +110,32 @@ class PipelineTests(unittest.TestCase):
 
     def test_ambiguous_or_missing_geometry_is_unknown(self):
         import numpy as np
-        from crosswalk_signal_selector import associate
+        from association import associate
 
         frame = np.zeros((1000, 1000, 3), dtype=np.uint8)
         crossing = [{"xyxy": [300, 350, 700, 1000]}]
         signals = [{"xyxy": [470, 180, 490, 230]}, {"xyxy": [510, 180, 530, 230]}]
-        with patch("crosswalk_signal_selector.estimate_vanishing_point", return_value=None):
+        with patch("association.estimate_vanishing_point", return_value=None):
             decision = associate(frame, signals, crossing, None)
         self.assertEqual(decision["reason"], "vanishing_point_unavailable")
-        with patch("crosswalk_signal_selector.estimate_vanishing_point", return_value=[500, 300]):
+        with patch("association.estimate_vanishing_point", return_value=[500, 300]):
             decision = associate(frame, signals, crossing, None)
         self.assertEqual(decision["reason"], "ambiguous_signals")
 
     def test_larger_signal_resolves_close_geometry(self):
         import numpy as np
-        from crosswalk_signal_selector import associate
+        from association import associate
 
         frame = np.zeros((1000, 1000, 3), dtype=np.uint8)
         crossing = [{"xyxy": [300, 350, 700, 1000]}]
         signals = [{"xyxy": [484, 180, 496, 210]}, {"xyxy": [500, 150, 540, 230]}]
-        with patch("crosswalk_signal_selector.estimate_vanishing_point", return_value=[500, 300]):
+        with patch("association.estimate_vanishing_point", return_value=[500, 300]):
             decision = associate(frame, signals, crossing, None)
         self.assertEqual(decision["status"], "candidate")
         self.assertEqual(decision["signal_index"], 1)
 
     def test_temporal_selector_requires_same_box_for_three_frames(self):
-        from crosswalk_signal_selector import TemporalSelector
+        from association import TemporalSelector
 
         selector = TemporalSelector(3)
         signals = [{"xyxy": [490, 180, 510, 230]}]
@@ -156,7 +156,7 @@ class PipelineTests(unittest.TestCase):
     def test_vanishing_point_from_converging_edges(self):
         import cv2
         import numpy as np
-        from crosswalk_signal_selector import estimate_vanishing_point
+        from association import estimate_vanishing_point
 
         frame = np.zeros((1000, 1000, 3), dtype=np.uint8)
         for bottom_x in (180, 220, 260, 740, 780, 820):
@@ -169,7 +169,7 @@ class PipelineTests(unittest.TestCase):
     def test_association_mode_returns_only_confirmed_signal(self):
         import numpy as np
         import torch
-        from crosswalk_signal_selector import TemporalSelector
+        from association import TemporalSelector
 
         args = runner.parse_args([
             "--source", "x.jpg", "--device", "cpu", "--associate-crosswalk",
@@ -217,7 +217,7 @@ class PipelineTests(unittest.TestCase):
     def test_single_signal_pipeline_classifies_without_crosswalk(self):
         import numpy as np
         import torch
-        from crosswalk_signal_selector import TemporalSelector
+        from association import TemporalSelector
 
         args = runner.parse_args(["--source", "x.jpg", "--device", "cpu", "--associate-crosswalk"])
         signal = {"class_name": "pedestrian_signal", "xyxy": [490, 180, 510, 230]}

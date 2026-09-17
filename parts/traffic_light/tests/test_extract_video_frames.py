@@ -5,7 +5,7 @@ import unittest
 
 
 spec = importlib.util.spec_from_file_location(
-    "extract_video_frames", Path(__file__).parents[1] / "extract_video_frames.py"
+    "extract_video_frames", Path(__file__).parents[1] / "tools" / "extract_video_frames.py"
 )
 extractor = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(extractor)

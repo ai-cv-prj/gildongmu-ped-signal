@@ -15,6 +15,23 @@
 COCO `traffic light`는 차량 신호등도 포함하므로 최종 시스템에서는
 `pedestrian_signal` 단일 클래스로 파인튜닝한 YOLO 가중치를 권장합니다.
 
+## 폴더 역할
+
+```text
+parts/traffic_light/
+├── runtime/   # 프로젝트 서버가 import하는 실시간 추론·후보 연결
+├── tools/     # 데이터 준비·파인튜닝·영상 테스트 명령
+└── tests/     # 자동 테스트
+```
+
+서버 코드는 `parts.traffic_light.runtime.pipeline`을 사용하고, 학습이나 영상 테스트는
+`parts/traffic_light/tools/`의 명령을 실행합니다. `data/`는 테스트 영상 보관용이라
+실시간 실행에는 필요하지 않지만 재현 테스트를 위해 현재 유지합니다.
+
+현재 신호등 검출기와 MobileNetV3-Small 색상 분류기의 파인튜닝은 최종 완료된 상태입니다.
+운영 환경에서는 검증된 `best.pt`를 사용하고, `tools/`의 학습 스크립트는 추후 데이터 추가나
+성능 개선이 필요할 때 재학습하기 위한 코드입니다.
+
 ## 설치
 
 팀 Python 3.14.4 가상환경과 CUDA 12.8 PyTorch를 먼저 준비합니다.
@@ -33,7 +50,7 @@ python scripts/check_gpu.py
 `manifest.jsonl`에는 원본 영상·프레임 번호·시간 정보가 기록됩니다.
 
 ```bash
-python parts/traffic_light/extract_video_frames.py \
+python parts/traffic_light/tools/extract_video_frames.py \
   --source data \
   --output datasets/traffic_light_frames \
   --sample-fps 3
@@ -42,7 +59,7 @@ python parts/traffic_light/extract_video_frames.py \
 먼저 영상별 10장만 시험하려면 다음처럼 실행합니다.
 
 ```bash
-python parts/traffic_light/extract_video_frames.py \
+python parts/traffic_light/tools/extract_video_frames.py \
   --source data \
   --output datasets/traffic_light_frames_preview \
   --sample-fps 3 \
@@ -81,7 +98,7 @@ class 0 = red, class 1 = green, class 2 = unknown
 라벨 한 줄은 `class_id center_x center_y width height`의 YOLO bbox 5열 형식이어야 합니다.
 
 ```bash
-python parts/traffic_light/prepare_classifier_crops.py \
+python parts/traffic_light/tools/prepare_classifier_crops.py \
   --images datasets/ped_signal_yolo/images \
   --labels datasets/ped_signal_yolo/labels \
   --output datasets/traffic_light_classifier \
@@ -99,7 +116,7 @@ python parts/traffic_light/prepare_classifier_crops.py \
 사전학습 백본을 기본으로 사용하고, 클래스 수 불균형도 loss에서 보정합니다.
 
 ```bash
-python parts/traffic_light/train_signal_classifier.py \
+python parts/traffic_light/tools/train_signal_classifier.py \
   --data datasets/traffic_light_classifier \
   --model both \
   --epochs 30 \
@@ -123,7 +140,7 @@ EfficientNet-B0의 정확도 상승이 실제로 의미 있을 때만 교체하�
 학습된 MobileNet 체크포인트를 전체 파이프라인에 연결하는 예시는 다음과 같습니다.
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
   --detector weights/yolo_pedestrian_signal_best.pt \
   --signal-classes pedestrian_signal \
@@ -145,7 +162,7 @@ EfficientNet은 두 `mobilenet_v3_small` 부분을 `efficientnet_b0`로 바꿔 �
 2클래스 검출기(`pedestrian_signal`, `crosswalk`)를 사용할 때만 연결 옵션을 켭니다.
 
 ```bash
-.venv/bin/python parts/traffic_light/benchmark_yolo_classifier.py \
+.venv/bin/python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
   --detector runs/traffic_light_crosswalk_detector/20260916_173303/weights/best.pt \
   --classifier-model mobilenet_v3_small \
@@ -199,7 +216,7 @@ bbox_5, bbox_6 → test
 학습하고, 이후 직접 촬영 데이터로 `unknown`을 추가합니다.
 
 ```bash
-python parts/traffic_light/prepare_classifier_crops.py \
+python parts/traffic_light/tools/prepare_classifier_crops.py \
   --images "/mnt/c/Users/10/Desktop/2차플젝/(2차_최종) 교차로정보 데이터셋_20210720" \
   --label-format labelme \
   --output datasets/intersection_signal_classifier \
@@ -224,7 +241,7 @@ train/val/test 수를 먼저 확인합니다. 출력 폴더가 비어 있지 않
 처음에는 MobileNet 하나를 5 epoch만 학습해 전체 과정이 정상인지 확인합니다.
 
 ```bash
-python parts/traffic_light/train_signal_classifier.py \
+python parts/traffic_light/tools/train_signal_classifier.py \
   --data datasets/intersection_signal_classifier \
   --model mobilenet_v3_small \
   --epochs 5 \
@@ -236,7 +253,7 @@ python parts/traffic_light/train_signal_classifier.py \
 정상 학습이 확인되면 두 후보를 30 epoch까지 비교합니다.
 
 ```bash
-python parts/traffic_light/train_signal_classifier.py \
+python parts/traffic_light/tools/train_signal_classifier.py \
   --data datasets/intersection_signal_classifier \
   --model both \
   --epochs 30 \
@@ -255,7 +272,7 @@ YOLO는 빨강/초록을 구별하지 않고 둘 다 class 0 `pedestrian_signal`
 원본 사진을 복사하지 않아 저장 공간을 아끼며, WSL 안에서 학습할 때 그대로 사용할 수 있습니다.
 
 ```bash
-python parts/traffic_light/prepare_yolo_signal_dataset.py \
+python parts/traffic_light/tools/prepare_yolo_signal_dataset.py \
   --source "/mnt/c/Users/10/Desktop/2차플젝/(2차_최종) 교차로정보 데이터셋_20210720" \
   --output datasets/intersection_pedestrian_signal_yolo \
   --split-map \
@@ -276,7 +293,7 @@ python parts/traffic_light/prepare_yolo_signal_dataset.py \
 먼저 5 epoch 시험 학습을 실행합니다.
 
 ```bash
-python parts/traffic_light/train_signal_detector.py \
+python parts/traffic_light/tools/train_signal_detector.py \
   --data datasets/intersection_pedestrian_signal_yolo/data.yaml \
   --model yolo26s.pt \
   --epochs 5 \
@@ -292,7 +309,7 @@ GPU 메모리 부족이 나오면 `--batch 8`, 그래도 부족하면 `--imgsz 6
 ### 5. 두 파인튜닝 모델 연결
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/test.mp4 \
   --detector runs/traffic_light_detector/<실행시각>/weights/best.pt \
   --signal-classes pedestrian_signal \
@@ -308,7 +325,7 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 사진:
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/signal.jpg \
   --classifier-model mobilenet_v3_small \
   --classifier-weights weights/mobilenet_v3_small_signal.pt
@@ -317,7 +334,7 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 영상 100개 처리 프레임:
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
   --classifier-model mobilenet_v3_small \
   --classifier-weights weights/mobilenet_v3_small_signal.pt \
@@ -341,7 +358,7 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 `untrained_timing_only`로 기록됩니다.
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/신호등1.mp4 \
   --device cpu \
   --classifier-model mobilenet_v3_small \
@@ -358,7 +375,7 @@ EfficientNet-B0를 확인하려면 `--classifier-model efficientnet_b0`로 바�
 추가할 수 있습니다.
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/신호등1.mp4 \
   --device cpu \
   --classifier-model mobilenet_v3_small \
@@ -389,7 +406,7 @@ torch.save(
 실행:
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
   --classifier-model efficientnet_b0 \
   --classifier-weights weights/efficientnet_b0_signal.pt \
@@ -402,7 +419,7 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 학습 당시 출력 노드 순서와 반드시 같아야 합니다. 다른 순서라면 명시합니다.
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
   --classifier-model efficientnet_b0 \
   --classifier-weights weights/efficientnet_b0_signal.pt \
@@ -412,7 +429,7 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 YOLO도 보행자 신호등 위치에 파인튜닝했다면 바꿔서 실행할 수 있습니다.
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
   --detector weights/yolo_signal_best.pt \
   --classifier-model efficientnet_b0 \
@@ -422,7 +439,7 @@ python parts/traffic_light/benchmark_yolo_classifier.py \
 FP16 실행:
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/walk.mp4 \
   --classifier-weights weights/efficientnet_b0_signal.pt \
   --max-frames 300 --half --no-save-media

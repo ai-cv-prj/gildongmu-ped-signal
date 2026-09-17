@@ -7,7 +7,7 @@ import unittest
 
 spec = importlib.util.spec_from_file_location(
     "prepare_yolo_signal_dataset",
-    Path(__file__).parents[1] / "prepare_yolo_signal_dataset.py",
+    Path(__file__).parents[1] / "tools" / "prepare_yolo_signal_dataset.py",
 )
 preparer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(preparer)

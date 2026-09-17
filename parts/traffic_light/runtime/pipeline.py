@@ -10,7 +10,10 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from uuid import uuid4
 
-from crosswalk_signal_selector import TemporalSelector, associate
+try:
+    from .association import TemporalSelector, associate
+except ImportError:  # direct loading by the legacy unit-test loader
+    from association import TemporalSelector, associate
 
 
 ROOT = Path(__file__).resolve().parents[2]

@@ -2,7 +2,7 @@
 
 ## 횡단보도 연결 실험 (2026-09-17)
 
-2클래스 YOLO의 `crosswalk` 검출을 `benchmark_yolo_classifier.py`에서 사용할 수 있도록
+2클래스 YOLO의 `crosswalk` 검출을 `runtime/pipeline.py`와 `tools/benchmark_yolo_classifier.py`에서 사용할 수 있도록
 `--associate-crosswalk` 옵션을 추가했다. 신호등이 1개면 그 신호등만 분류해
 `single_signal`로 기록하고, 횡단보도와의 관계는 미확인으로 남긴다. 2개 이상이면 화면
 아래·중앙의 횡단보도, 선분 교차로 추정한 소실점, 신호등의 방향·크기, 영상 프레임 간
@@ -14,7 +14,7 @@
 실행 예:
 
 ```bash
-.venv/bin/python parts/traffic_light/benchmark_yolo_classifier.py \
+.venv/bin/python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source "/mnt/c/Users/10/Desktop/2차플젝/파인튜닝 이후 테스트/완료/갤럭시quantum3_신촌_가로_신호등_C_10.mp4" \
   --detector runs/traffic_light_crosswalk_detector/20260916_173303/weights/best.pt \
   --signal-classes pedestrian_signal --crosswalk-class crosswalk \
@@ -29,6 +29,27 @@ WSL에서는 Windows `C:\Users\...` 경로 대신 `/mnt/c/Users/...`를 사용�
 2026-09-17 기준 연결 기능 전용 및 전체 테스트 40개가 통과했다. 이 기능은 횡단보도와
 신호등의 공간적 후보를 만들 뿐 횡단 시작 허가를 결정하지 않는다. 실사용 전에는 다중
 신호등 영상에 횡단보도↔신호등 정답을 붙여 연결 정확도와 `unknown` 비율을 측정해야 한다.
+
+## 폴더 역할 분리
+
+```text
+parts/traffic_light/
+├── runtime/   # 서버가 import하는 실시간 추론·연결 로직
+├── tools/     # 데이터 준비·파인튜닝·영상 벤치마크 CLI
+└── tests/     # 두 영역의 자동 테스트
+```
+
+모델을 다시 학습할 때는 `tools/`를 실행하고, 프로젝트 서버에서는
+`parts.traffic_light.runtime.pipeline`의 함수만 호출한다. `data/`는 코드가 아니라 통합
+테스트용 영상 5개(약 243MB)이므로 런타임 필수 파일이 아니지만 재현 테스트에 필요해
+현재 보존한다. 삭제할 경우 WSL 경로를 사용하는 문서의 영상 테스트를 수행할 수 없다.
+
+## 파인튜닝 상태
+
+신호등 검출기(`pedestrian_signal`)와 색상 분류기(MobileNetV3-Small)의 파인튜닝은
+최종 완료되었다. 운영 파이프라인은 검증된 `best.pt` 가중치를 로드해 사용하며, `tools/`의
+학습 스크립트는 데이터가 추가되거나 성능을 개선할 때의 재학습·재현 용도로 보존한다.
+횡단보도 연결은 별도 실험 로직이므로 실사용 전 다중 신호등 영상 평가가 필요하다.
 
 ## 1. 현재 목표
 
@@ -55,7 +76,7 @@ YOLO는 위치만 담당하고, 색상 분류기는 crop 이미지의 색만 담
 프레임 번호, timestamp를 `manifest.jsonl`에 기록한다.
 
 ```bash
-python parts/traffic_light/extract_video_frames.py \
+python parts/traffic_light/tools/extract_video_frames.py \
   --source data \
   --output datasets/traffic_light_frames \
   --sample-fps 3
@@ -87,7 +108,7 @@ dataset/labels/test/*.txt       # 선택
 실행 예:
 
 ```bash
-python parts/traffic_light/prepare_classifier_crops.py \
+python parts/traffic_light/tools/prepare_classifier_crops.py \
   --images datasets/ped_signal_yolo/images \
   --labels datasets/ped_signal_yolo/labels \
   --output datasets/traffic_light_classifier \
@@ -119,7 +140,7 @@ ImageNet 사전학습 가중치를 사용하고, 클래스 불균형을 보정�
 accuracy가 아니라 클래스별 recall 평균인 `macro_recall` 기준으로 저장한다.
 
 ```bash
-python parts/traffic_light/train_signal_classifier.py \
+python parts/traffic_light/tools/train_signal_classifier.py \
   --data datasets/traffic_light_classifier \
   --model both \
   --epochs 30 \
@@ -140,12 +161,12 @@ runs/traffic_light_classifier/<실행ID>/
 `best.pt`가 실제 추론에 사용하는 파인튜닝 체크포인트다. `history.json`에는 epoch별
 학습 기록이, `result.json`에는 recall·confusion matrix·파라미터 수가 저장된다.
 
-### `benchmark_yolo_classifier.py`
+### `runtime/pipeline.py`와 `tools/benchmark_yolo_classifier.py`
 
 YOLO와 색상 분류기를 연결하여 실제 이미지·영상에서 처리 속도를 측정한다.
 
 ```bash
-python parts/traffic_light/benchmark_yolo_classifier.py \
+python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source data/test.mp4 \
   --detector weights/yolo_pedestrian_signal.pt \
   --signal-classes pedestrian_signal \
@@ -309,7 +330,7 @@ runs/traffic_light_classifier/20260915T085300Z_3f63cc9d/
 0.70, `imgsz=960`이다.
 
 ```bash
-.venv/bin/python parts/traffic_light/benchmark_yolo_classifier.py \
+.venv/bin/python parts/traffic_light/tools/benchmark_yolo_classifier.py \
   --source "/mnt/c/Users/10/Desktop/2차플젝/yolo 객체 탐지 분류기 모델 속도/신호등 원본 동영상/신호등1.mp4" \
   --detector runs/traffic_light_detector/20260916_추가학습/weights/best.pt \
   --signal-classes pedestrian_signal \

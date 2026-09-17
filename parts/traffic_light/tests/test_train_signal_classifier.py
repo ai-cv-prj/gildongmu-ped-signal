@@ -4,7 +4,7 @@ import unittest
 
 
 spec = importlib.util.spec_from_file_location(
-    "train_signal_classifier", Path(__file__).parents[1] / "train_signal_classifier.py"
+    "train_signal_classifier", Path(__file__).parents[1] / "tools" / "train_signal_classifier.py"
 )
 trainer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(trainer)

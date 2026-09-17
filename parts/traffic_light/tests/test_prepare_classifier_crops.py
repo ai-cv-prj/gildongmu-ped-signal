@@ -6,7 +6,7 @@ import unittest
 
 
 spec = importlib.util.spec_from_file_location(
-    "prepare_classifier_crops", Path(__file__).parents[1] / "prepare_classifier_crops.py"
+    "prepare_classifier_crops", Path(__file__).parents[1] / "tools" / "prepare_classifier_crops.py"
 )
 preparer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(preparer)
