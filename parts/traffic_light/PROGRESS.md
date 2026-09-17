@@ -1,8 +1,36 @@
 # 신호등 파트 진행 문서
 
+## 횡단보도 연결 실험 (2026-09-17)
+
+2클래스 YOLO의 `crosswalk` 검출을 `benchmark_yolo_classifier.py`에서 사용할 수 있도록
+`--associate-crosswalk` 옵션을 추가했다. 화면 아래·중앙의 횡단보도, 선분 교차로 추정한
+소실점, 신호등의 방향·크기, 영상 프레임 간 같은 박스 유지 여부로 후보를 고른다.
+`frames.jsonl`에 `association`과 `crosswalks`를 기록한다. 소실점 추정 실패·후보 모호성·
+시간적 불일치는 `unknown`이다. 실제 테스트 사진 1장에서는 횡단보도 2개, 신호등 0개가
+검출되어 신호등을 연결할 수 없었다. 연결 정확도는 아직 평가되지 않았다.
+
+실행 예:
+
+```bash
+.venv/bin/python parts/traffic_light/benchmark_yolo_classifier.py \
+  --source "/mnt/c/Users/10/Desktop/2차플젝/파인튜닝 이후 테스트/완료/갤럭시quantum3_신촌_가로_신호등_C_10.mp4" \
+  --detector runs/traffic_light_crosswalk_detector/20260916_173303/weights/best.pt \
+  --signal-classes pedestrian_signal --crosswalk-class crosswalk \
+  --classifier-model mobilenet_v3_small \
+  --classifier-weights runs/traffic_light_classifier/20260915T085300Z_3f63cc9d/mobilenet_v3_small/best.pt \
+  --associate-crosswalk --device 0 --warmup 0
+```
+
+WSL에서는 Windows `C:\Users\...` 경로 대신 `/mnt/c/Users/...`를 사용하고, 공백이 있는
+경로를 큰따옴표로 감싼다. 여러 줄 명령의 마지막 줄에는 줄 연결 문자 `\\`를 붙이지 않는다.
+
+2026-09-17 기준 연결 기능 전용 및 전체 테스트 37개가 통과했다. 이 기능은 횡단보도와
+신호등의 공간적 후보를 만들 뿐 횡단 시작 허가를 결정하지 않는다. 실사용 전에는 다중
+신호등 영상에 횡단보도↔신호등 정답을 붙여 연결 정확도와 `unknown` 비율을 측정해야 한다.
+
 ## 1. 현재 목표
 
-보행자 신호등을 다음 2단계로 처리한다.
+보행자 신호등을 다음 흐름으로 처리한다.
 
 ```text
 YOLO 객체 검출
@@ -10,6 +38,7 @@ YOLO 객체 검출
   → 검출 박스 crop
   → 색상 분류기
   → red / green / unknown
+  → 횡단보도↔신호등 후보 연결
 ```
 
 YOLO는 위치만 담당하고, 색상 분류기는 crop 이미지의 색만 담당한다. 따라서 YOLO를

@@ -10,6 +10,8 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from uuid import uuid4
 
+from crosswalk_signal_selector import TemporalSelector, associate
+
 
 ROOT = Path(__file__).resolve().parents[2]
 SIGNAL_NAMES = {"traffic light", "pedestrian_signal", "pedestrian_red", "pedestrian_green"}
@@ -45,6 +47,13 @@ def parse_args(argv=None):
         "--signal-classes", nargs="+", default=sorted(SIGNAL_NAMES),
         help="YOLO 결과 중 신호등으로 받아들일 class 이름",
     )
+    parser.add_argument(
+        "--associate-crosswalk", action="store_true",
+        help="횡단보도 소실점과 프레임 일관성으로 현재 횡단보도 신호등 후보를 연결",
+    )
+    parser.add_argument("--crosswalk-class", default="crosswalk")
+    parser.add_argument("--crosswalk-min-confidence", type=probability, default=0.50)
+    parser.add_argument("--association-stable-frames", type=positive_int, default=3)
     parser.add_argument(
         "--classifier-model",
         choices=["efficientnet_b0", "mobilenet_v3_small"],
@@ -152,6 +161,10 @@ def extract_signal_detections(result, signal_names=SIGNAL_NAMES):
                 "xyxy": [float(value) for value in xyxy],
             })
     return detections
+
+
+def extract_crosswalk_detections(result, crosswalk_name="crosswalk"):
+    return extract_signal_detections(result, [crosswalk_name])
 
 
 class FrameReader:
@@ -361,10 +374,16 @@ def run_classifier(model, batch, class_names, trained, args, torch):
     }
 
 
-def run_pipeline(detector, classifier, class_names, trained, frame, args, torch, cv2):
+def run_pipeline(detector, classifier, class_names, trained, frame, args, torch, cv2,
+                 selector=None):
     pipeline_started = time.perf_counter()
     result, timing = run_detector(detector, frame, args, torch)
     detections = extract_signal_detections(result, args.signal_classes)
+    crosswalks = (
+        [item for item in extract_crosswalk_detections(result, args.crosswalk_class)
+         if item["confidence"] >= args.crosswalk_min_confidence]
+        if selector else []
+    )
 
     started = time.perf_counter()
     batch, classified_detections = prepare_crops(frame, detections, args, cv2, torch)
@@ -375,12 +394,25 @@ def run_pipeline(detector, classifier, class_names, trained, frame, args, torch,
     timing.update(classifier_timing)
     for detection, prediction in zip(classified_detections, predictions):
         detection["classification"] = prediction
+    association = None
+    if selector:
+        association = selector.update(
+            associate(frame, detections, crosswalks, cv2), detections, crosswalks
+        )
+        index = association["signal_index"]
+        classification = detections[index].get("classification") if index is not None else None
+        association["color"] = (
+            classification["class_name"]
+            if association["status"] == "matched" and classification
+            and classification.get("trained") and classification["class_name"] in {"red", "green"}
+            else "unknown"
+        )
     synchronize(torch, torch_device(args.device))
     timing["total_pipeline_wall"] = (time.perf_counter() - pipeline_started) * 1000
-    return detections, timing
+    return detections, crosswalks, association, timing
 
 
-def draw_result(frame, detections, timing, cv2):
+def draw_result(frame, detections, timing, cv2, crosswalks=None, association=None):
     canvas = frame.copy()
     title = (
         f"YOLO {timing['detector_pipeline_wall']:.1f}ms + "
@@ -389,6 +421,15 @@ def draw_result(frame, detections, timing, cv2):
     )
     cv2.rectangle(canvas, (0, 0), (canvas.shape[1], 36), (25, 25, 25), -1)
     cv2.putText(canvas, title, (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.58, (255, 255, 255), 2)
+    for crosswalk in crosswalks or []:
+        x1, y1, x2, y2 = (int(round(value)) for value in crosswalk["xyxy"])
+        cv2.rectangle(canvas, (x1, y1), (x2, y2), (255, 180, 0), 2)
+    if association:
+        point = association["vanishing_point"]
+        if point:
+            cv2.circle(canvas, tuple(int(round(v)) for v in point), 6, (255, 0, 255), -1)
+        label = f"association: {association['status']} / {association['reason'] or association['color']}"
+        cv2.putText(canvas, label, (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
     for detection in detections:
         x1, y1, x2, y2 = (int(round(value)) for value in detection["xyxy"])
         classification = detection.get("classification")
@@ -424,6 +465,11 @@ def summarize(records):
         values = [record["timing_ms"][key] for record in records]
         summary[f"mean_{key}_ms"] = sum(values) / len(values) if values else None
     summary["detected_signals"] = sum(len(record["detections"]) for record in records)
+    summary["detected_crosswalks"] = sum(len(record.get("crosswalks", [])) for record in records)
+    summary["matched_frames"] = sum(
+        record.get("association", {}).get("status") == "matched" for record in records
+        if record.get("association")
+    )
     classified_frames = [record for record in records if any("classification" in item for item in record["detections"])]
     summary["frames_with_classification"] = len(classified_frames)
     if classified_frames:
@@ -470,6 +516,14 @@ def main(argv=None):
             "YOLO 클래스와 --signal-classes가 하나도 일치하지 않습니다. "
             f"YOLO 클래스: {sorted(detector_label_names)}"
         )
+    if args.associate_crosswalk and args.crosswalk_class.strip().lower() not in detector_label_names:
+        raise ValueError(
+            f"횡단보도 클래스 {args.crosswalk_class!r}가 검출기에 없습니다: "
+            f"{sorted(detector_label_names)}"
+        )
+    if args.associate_crosswalk and args.crosswalk_class.strip().lower() in matched_signal_classes:
+        raise ValueError("신호등 클래스와 횡단보도 클래스는 달라야 합니다.")
+    selector = TemporalSelector(args.association_stable_frames) if args.associate_crosswalk else None
     if matched_signal_classes == {"traffic light"}:
         print(
             "주의: COCO traffic light는 차량 신호등도 포함합니다. 최종 보행자 신호 판단에는 "
@@ -529,6 +583,8 @@ def main(argv=None):
     try:
         with (output / "frames.jsonl").open("w", encoding="utf-8") as log:
             for result_index, (source_index, timestamp_ms, source_name, frame) in enumerate(reader, start=1):
+                if selector and reader.kind in {"image", "directory"}:
+                    selector = TemporalSelector(args.association_stable_frames)
                 if result_index == 1 and args.warmup:
                     print(f"검출기 워밍업 {args.warmup}회 (측정 제외)")
                     for _ in range(args.warmup):
@@ -539,8 +595,8 @@ def main(argv=None):
                     )
                     for _ in range(args.warmup):
                         run_classifier(classifier, dummy_batch, class_names, trained, args, torch)
-                detections, timing = run_pipeline(
-                    detector, classifier, class_names, trained, frame, args, torch, cv2
+                detections, crosswalks, association, timing = run_pipeline(
+                    detector, classifier, class_names, trained, frame, args, torch, cv2, selector
                 )
                 record = {
                     "result_index": result_index,
@@ -551,12 +607,15 @@ def main(argv=None):
                     "crop_batch_size": sum("classification" in item for item in detections),
                     "timing_ms": timing,
                     "detections": detections,
+                    "crosswalks": crosswalks,
+                    "association": association,
                 }
                 records.append(record)
                 log.write(json.dumps(record, ensure_ascii=False) + "\n")
                 log.flush()
                 print(
-                    f"[{result_index}] signals={len(detections)} | "
+                    f"[{result_index}] signals={len(detections)} crosswalks={len(crosswalks)} "
+                    f"association={association['status'] if association else 'off'} | "
                     f"YOLO={timing['detector_pipeline_wall']:.1f}ms "
                     f"crop={timing['crop_preprocess']:.1f}ms "
                     f"classifier={timing['classifier_inference']:.1f}ms "
@@ -564,7 +623,7 @@ def main(argv=None):
                 )
 
                 if not args.no_save_media or args.show:
-                    annotated = draw_result(frame, detections, timing, cv2)
+                    annotated = draw_result(frame, detections, timing, cv2, crosswalks, association)
                     if not args.no_save_media:
                         if reader.kind in {"image", "directory"}:
                             cv2.imwrite(str(output / f"{result_index:06d}_result.jpg"), annotated)

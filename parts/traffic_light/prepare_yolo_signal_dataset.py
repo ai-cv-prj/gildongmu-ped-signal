@@ -33,6 +33,10 @@ def parse_args(argv=None):
         help="pedestrian_signal 하나로 합칠 원본 LabelMe 라벨",
     )
     parser.add_argument(
+        "--include-crosswalk", action="store_true",
+        help="Zebra_Cross를 class 1 crosswalk로 추가",
+    )
+    parser.add_argument(
         "--split-map", nargs="+", required=True,
         help="최상위폴더=train|val|test 매핑",
     )
@@ -80,7 +84,7 @@ def read_labelme(path):
         raise ValueError(f"잘못된 LabelMe JSON입니다: {path}") from error
 
 
-def signal_boxes(payload, signal_labels, label_path):
+def signal_boxes(payload, signal_labels, label_path, include_crosswalk=False):
     try:
         width = float(payload["imageWidth"])
         height = float(payload["imageHeight"])
@@ -93,12 +97,12 @@ def signal_boxes(payload, signal_labels, label_path):
     ignored = []
     for shape_index, shape in enumerate(payload.get("shapes", []), start=1):
         label = str(shape.get("label", "")).strip()
-        if label not in signal_labels:
+        if label not in signal_labels and not (include_crosswalk and label == "Zebra_Cross"):
             if label:
                 ignored.append(label)
             continue
         if shape.get("shape_type") != "rectangle":
-            raise ValueError(f"신호 라벨이 rectangle이 아닙니다: {label_path} shape {shape_index}")
+            raise ValueError(f"대상 라벨이 rectangle이 아닙니다: {label_path} shape {shape_index}")
         points = shape.get("points", [])
         if len(points) != 2 or any(len(point) != 2 for point in points):
             raise ValueError(f"잘못된 rectangle 좌표입니다: {label_path} shape {shape_index}")
@@ -113,6 +117,7 @@ def signal_boxes(payload, signal_labels, label_path):
         if x2 <= x1 or y2 <= y1:
             continue
         boxes.append((
+            1 if label == "Zebra_Cross" else 0,
             ((x1 + x2) / 2) / width,
             ((y1 + y2) / 2) / height,
             (x2 - x1) / width,
@@ -126,7 +131,7 @@ def destination_stem(relative_path):
     return f"{relative_path.stem}_{digest}"
 
 
-def discover_records(source, split_map, signal_labels):
+def discover_records(source, split_map, signal_labels, include_crosswalk=False):
     source = source.expanduser().resolve()
     if not source.is_dir():
         raise ValueError(f"원본 폴더가 없습니다: {source}")
@@ -141,7 +146,9 @@ def discover_records(source, split_map, signal_labels):
         label_path = image_path.with_suffix(".json")
         if not label_path.is_file():
             continue
-        boxes, ignored = signal_boxes(read_labelme(label_path), signal_labels, label_path)
+        boxes, ignored = signal_boxes(
+            read_labelme(label_path), signal_labels, label_path, include_crosswalk
+        )
         for label in ignored:
             ignored_counts[label] = ignored_counts.get(label, 0) + 1
         records.append({
@@ -181,6 +188,7 @@ def write_dataset(records, output, image_mode):
     manifest = []
     split_counts = {}
     box_counts = {}
+    class_box_counts = {}
     negative_counts = {}
     for record in records:
         split = record["split"]
@@ -194,13 +202,16 @@ def write_dataset(records, output, image_mode):
         write_image(record["source_image"], image_destination, image_mode)
         label_destination.write_text(
             "".join(
-                f"0 {center_x:.8f} {center_y:.8f} {width:.8f} {height:.8f}\n"
-                for center_x, center_y, width, height in record["boxes"]
+                f"{class_id} {center_x:.8f} {center_y:.8f} {width:.8f} {height:.8f}\n"
+                for class_id, center_x, center_y, width, height in record["boxes"]
             ),
             encoding="utf-8",
         )
         split_counts[split] = split_counts.get(split, 0) + 1
         box_counts[split] = box_counts.get(split, 0) + len(record["boxes"])
+        counts = class_box_counts.setdefault(split, {})
+        for class_id, *_ in record["boxes"]:
+            counts[class_id] = counts.get(class_id, 0) + 1
         if not record["boxes"]:
             negative_counts[split] = negative_counts.get(split, 0) + 1
         manifest.append({
@@ -211,7 +222,7 @@ def write_dataset(records, output, image_mode):
             "split": split,
             "box_count": len(record["boxes"]),
         })
-    return manifest, split_counts, box_counts, negative_counts
+    return manifest, split_counts, box_counts, class_box_counts, negative_counts
 
 
 def main(argv=None):
@@ -219,19 +230,31 @@ def main(argv=None):
     if len(set(args.signal_labels)) != len(args.signal_labels):
         raise ValueError("--signal-labels에 중복이 있습니다.")
     split_map = parse_mapping(args.split_map)
-    records, ignored_counts = discover_records(args.source, split_map, set(args.signal_labels))
+    records, ignored_counts = discover_records(
+        args.source, split_map, set(args.signal_labels), args.include_crosswalk
+    )
     selected = select_records(records, args.negative_ratio, args.seed)
     if not any(record["split"] == "train" and record["boxes"] for record in selected):
         raise ValueError("train split에 신호등 정답 박스가 없습니다.")
     if not any(record["split"] == "val" and record["boxes"] for record in selected):
         raise ValueError("val split에 신호등 정답 박스가 없습니다.")
+    if args.include_crosswalk:
+        for split in ("train", "val"):
+            present_classes = {
+                box[0] for record in selected if record["split"] == split
+                for box in record["boxes"]
+            }
+            if present_classes != {0, 1}:
+                raise ValueError(f"{split} split에 두 클래스 정답 박스가 모두 필요합니다.")
     output = ensure_empty_output(args.output)
-    manifest, split_counts, box_counts, negative_counts = write_dataset(
+    manifest, split_counts, box_counts, class_box_counts, negative_counts = write_dataset(
         selected, output, args.image_mode
     )
+    names = ["pedestrian_signal", "crosswalk"] if args.include_crosswalk else ["pedestrian_signal"]
     (output / "data.yaml").write_text(
         f"path: {output}\ntrain: images/train\nval: images/val\n"
-        f"test: images/test\nnames:\n  0: pedestrian_signal\n",
+        "test: images/test\nnames:\n"
+        + "".join(f"  {index}: {name}\n" for index, name in enumerate(names)),
         encoding="utf-8",
     )
     with (output / "manifest.jsonl").open("w", encoding="utf-8") as file:
@@ -242,8 +265,13 @@ def main(argv=None):
         "selected_images": len(selected),
         "split_image_counts": split_counts,
         "split_box_counts": box_counts,
+        "split_class_box_counts": {
+            split: {names[class_id]: count for class_id, count in counts.items()}
+            for split, counts in class_box_counts.items()
+        },
         "split_negative_counts": negative_counts,
         "signal_labels": args.signal_labels,
+        "class_names": names,
         "ignored_label_counts": ignored_counts,
         "negative_ratio": args.negative_ratio,
         "image_mode": args.image_mode,

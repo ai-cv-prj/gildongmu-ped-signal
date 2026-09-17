@@ -1,7 +1,11 @@
 import importlib.util
 from pathlib import Path
 from types import SimpleNamespace
+import sys
 import unittest
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).parents[1]))
 
 
 spec = importlib.util.spec_from_file_location(
@@ -69,6 +73,84 @@ class PipelineTests(unittest.TestCase):
         detections = runner.extract_signal_detections(result, ["custom_signal"])
         self.assertEqual(len(detections), 1)
         self.assertEqual(detections[0]["class_name"], "custom_signal")
+
+    def test_crosswalk_is_extracted_separately(self):
+        result = SimpleNamespace(boxes=Boxes(), names={9: "pedestrian_signal", 5: "crosswalk"})
+        self.assertEqual(len(runner.extract_signal_detections(result)), 1)
+        self.assertEqual(len(runner.extract_crosswalk_detections(result)), 1)
+
+    def test_association_uses_direction_before_size(self):
+        import numpy as np
+        from crosswalk_signal_selector import associate
+
+        frame = np.zeros((1000, 1000, 3), dtype=np.uint8)
+        crossing = [{"xyxy": [300, 350, 700, 1000]}]
+        signals = [
+            {"xyxy": [490, 180, 510, 230]},
+            {"xyxy": [640, 100, 760, 300]},
+        ]
+        with patch("crosswalk_signal_selector.estimate_vanishing_point", return_value=[500, 300]):
+            decision = associate(frame, signals, crossing, None)
+        self.assertEqual(decision["status"], "candidate")
+        self.assertEqual(decision["signal_index"], 0)
+
+    def test_ambiguous_or_missing_geometry_is_unknown(self):
+        import numpy as np
+        from crosswalk_signal_selector import associate
+
+        frame = np.zeros((1000, 1000, 3), dtype=np.uint8)
+        crossing = [{"xyxy": [300, 350, 700, 1000]}]
+        signals = [{"xyxy": [470, 180, 490, 230]}, {"xyxy": [510, 180, 530, 230]}]
+        with patch("crosswalk_signal_selector.estimate_vanishing_point", return_value=None):
+            decision = associate(frame, signals, crossing, None)
+        self.assertEqual(decision["reason"], "vanishing_point_unavailable")
+        with patch("crosswalk_signal_selector.estimate_vanishing_point", return_value=[500, 300]):
+            decision = associate(frame, signals, crossing, None)
+        self.assertEqual(decision["reason"], "ambiguous_signals")
+
+    def test_larger_signal_resolves_close_geometry(self):
+        import numpy as np
+        from crosswalk_signal_selector import associate
+
+        frame = np.zeros((1000, 1000, 3), dtype=np.uint8)
+        crossing = [{"xyxy": [300, 350, 700, 1000]}]
+        signals = [{"xyxy": [484, 180, 496, 210]}, {"xyxy": [500, 150, 540, 230]}]
+        with patch("crosswalk_signal_selector.estimate_vanishing_point", return_value=[500, 300]):
+            decision = associate(frame, signals, crossing, None)
+        self.assertEqual(decision["status"], "candidate")
+        self.assertEqual(decision["signal_index"], 1)
+
+    def test_temporal_selector_requires_same_box_for_three_frames(self):
+        from crosswalk_signal_selector import TemporalSelector
+
+        selector = TemporalSelector(3)
+        signals = [{"xyxy": [490, 180, 510, 230]}]
+        crosswalks = [{"xyxy": [300, 350, 700, 1000]}]
+        def candidate():
+            return {"status": "candidate", "reason": None, "signal_index": 0,
+                    "crosswalk_index": 0}
+        first = selector.update(candidate(), signals, crosswalks)
+        self.assertEqual(first["status"], "unknown")
+        self.assertIsNone(first["signal_index"])
+        self.assertEqual(selector.update(candidate(), signals, crosswalks)["status"], "unknown")
+        self.assertEqual(selector.update(candidate(), signals, crosswalks)["status"], "matched")
+        shifted = [{"xyxy": [0, 350, 200, 1000]}]
+        self.assertEqual(selector.update(candidate(), signals, shifted)["stable_frames"], 1)
+        selector.update({"status": "unknown", "signal_index": None}, signals, crosswalks)
+        self.assertEqual(selector.update(candidate(), signals, crosswalks)["stable_frames"], 1)
+
+    def test_vanishing_point_from_converging_edges(self):
+        import cv2
+        import numpy as np
+        from crosswalk_signal_selector import estimate_vanishing_point
+
+        frame = np.zeros((1000, 1000, 3), dtype=np.uint8)
+        for bottom_x in (180, 220, 260, 740, 780, 820):
+            cv2.line(frame, (500, 300), (bottom_x, 900), (255, 255, 255), 4)
+        point = estimate_vanishing_point(frame, [100, 200, 900, 950], cv2)
+        self.assertIsNotNone(point)
+        self.assertAlmostEqual(point[0], 500, delta=20)
+        self.assertAlmostEqual(point[1], 300, delta=20)
 
     def test_summary_separates_empty_classifier_frames(self):
         timing = {

@@ -1,4 +1,4 @@
-"""Fine-tune an Ultralytics YOLO detector for one pedestrian_signal class."""
+"""Fine-tune an Ultralytics YOLO detector for pedestrian signals and optional crosswalks."""
 
 import argparse
 import json

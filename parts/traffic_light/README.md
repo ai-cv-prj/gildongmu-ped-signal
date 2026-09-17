@@ -140,6 +140,32 @@ EfficientNet은 두 `mobilenet_v3_small` 부분을 `efficientnet_b0`로 바꿔 �
 세로가 6픽셀보다 작아도 색 판별을 건너뜁니다. 각각
 `--classifier-min-confidence`, `--min-crop-size`로 조정할 수 있습니다.
 
+### 횡단보도와 현재 보행 신호등 후보 연결 (실험용)
+
+2클래스 검출기(`pedestrian_signal`, `crosswalk`)를 사용할 때만 연결 옵션을 켭니다.
+
+```bash
+.venv/bin/python parts/traffic_light/benchmark_yolo_classifier.py \
+  --source data/walk.mp4 \
+  --detector runs/traffic_light_crosswalk_detector/20260916_173303/weights/best.pt \
+  --classifier-model mobilenet_v3_small \
+  --classifier-weights runs/traffic_light_classifier/20260915T085300Z_3f63cc9d/mobilenet_v3_small/best.pt \
+  --associate-crosswalk \
+  --device 0
+```
+
+화면 아래쪽에서 시작하고 중앙에 가까운 횡단보도를 선택합니다. 해당 박스 안의 선분이
+한 점으로 수렴할 때만 소실점을 추정하고, 진행 방향에 가까운 신호등을 우선 선택합니다.
+신호등 크기는 비슷한 후보를 구별하는 작은 보조 점수로만 사용합니다. 영상에서는 같은
+신호등이 기본 3프레임 연속 선택되어야 `matched`가 됩니다. 한 장의 사진을 확인할 때는
+`--association-stable-frames 1`을 지정할 수 있지만 시간적 검증은 수행되지 않습니다.
+
+프레임별 `frames.jsonl`의 `crosswalks`와 `association`에 후보 점수, 소실점, 선택 결과,
+`unknown` 사유가 기록됩니다. `association.color`는 연결된 신호등의 분류 결과이며,
+이 기능은 횡단 시작 허가를 출력하지 않습니다. 횡단보도 박스만으로는 소실점이 보장되지
+않고, 신호등 검출 누락이나 유사한 후보가 있으면 `unknown`입니다. 실제 안내에 사용하기
+전에 다중 신호등 교차로 영상에서 횡단보도↔신호등 연결 정답으로 별도 평가가 필요합니다.
+
 ## 교차로정보 LabelMe 데이터로 파인튜닝
 
 현재 확인한 원본 폴더는 이미지와 같은 이름의 LabelMe JSON을 함께 가지고 있습니다.
