@@ -152,6 +152,54 @@ class PipelineTests(unittest.TestCase):
         self.assertAlmostEqual(point[0], 500, delta=20)
         self.assertAlmostEqual(point[1], 300, delta=20)
 
+    def test_association_mode_returns_only_confirmed_signal(self):
+        import numpy as np
+        import torch
+        from crosswalk_signal_selector import TemporalSelector
+
+        args = runner.parse_args([
+            "--source", "x.jpg", "--device", "cpu", "--associate-crosswalk",
+            "--association-stable-frames", "1",
+        ])
+        signals = [
+            {"class_name": "pedestrian_signal", "xyxy": [100, 100, 120, 150]},
+            {"class_name": "pedestrian_signal", "xyxy": [500, 100, 520, 150]},
+        ]
+        crosswalks = [{"class_name": "crosswalk", "confidence": 0.9,
+                       "xyxy": [100, 400, 900, 1000]}]
+        captured = {}
+
+        def fake_crops(frame, selected, args, cv2, torch_module):
+            captured["selected"] = selected
+            return torch.zeros((len(selected), 3, 8, 8)), selected
+
+        timing = {"detector_preprocess": 0.0, "detector_inference": 0.0,
+                  "detector_postprocess": 0.0, "detector_pipeline_wall": 0.0,
+                  "crop_preprocess": 0.0}
+        with patch.object(runner, "run_detector", return_value=(object(), timing)), \
+             patch.object(runner, "extract_signal_detections", return_value=signals), \
+             patch.object(runner, "extract_crosswalk_detections", return_value=crosswalks), \
+             patch.object(runner, "associate", return_value={
+                 "status": "candidate", "reason": None, "crosswalk_index": 0,
+                 "signal_index": 1, "candidates": [], "vanishing_point": [500, 300],
+             }), \
+             patch.object(runner, "prepare_crops", side_effect=fake_crops), \
+             patch.object(runner, "run_classifier", return_value=([{
+                 "class_name": "green", "raw_class_name": "green",
+                 "confidence": 0.99, "trained": True,
+             }], {"classifier_input_transfer": 0.0, "classifier_inference": 0.0,
+                 "classifier_postprocess": 0.0})):
+            visible, found_crosswalks, association, _ = runner.run_pipeline(
+                object(), object(), ["green", "red"], True,
+                np.zeros((1000, 1000, 3), dtype=np.uint8), args, torch, object(),
+                TemporalSelector(1),
+            )
+        self.assertEqual(len(captured["selected"]), 1)
+        self.assertEqual(captured["selected"][0]["xyxy"], signals[1]["xyxy"])
+        self.assertEqual(len(visible), 1)
+        self.assertEqual(visible[0]["xyxy"], signals[1]["xyxy"])
+        self.assertEqual(association["status"], "matched")
+
     def test_summary_separates_empty_classifier_frames(self):
         timing = {
             "detector_preprocess": 1.0, "detector_inference": 2.0,

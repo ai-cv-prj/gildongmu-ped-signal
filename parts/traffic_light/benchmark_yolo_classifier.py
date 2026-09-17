@@ -385,8 +385,26 @@ def run_pipeline(detector, classifier, class_names, trained, frame, args, torch,
         if selector else []
     )
 
+    association = None
+    if selector:
+        association = selector.update(
+            associate(frame, detections, crosswalks, cv2), detections, crosswalks
+        )
+
+    # In association mode, classify only the geometrically selected signal.
+    # During temporal warm-up, keep the provisional candidate as unknown; when
+    # there is no candidate, no signal is shown or classified.
+    if selector:
+        selected_index = association.get("signal_index")
+        if selected_index is None:
+            selected_index = association.get("candidate_signal_index")
+        selected = [detections[selected_index]] if selected_index is not None else []
+    else:
+        selected_index = None
+        selected = detections
+
     started = time.perf_counter()
-    batch, classified_detections = prepare_crops(frame, detections, args, cv2, torch)
+    batch, classified_detections = prepare_crops(frame, selected, args, cv2, torch)
     timing["crop_preprocess"] = (time.perf_counter() - started) * 1000
     predictions, classifier_timing = run_classifier(
         classifier, batch, class_names, trained, args, torch
@@ -394,13 +412,15 @@ def run_pipeline(detector, classifier, class_names, trained, frame, args, torch,
     timing.update(classifier_timing)
     for detection, prediction in zip(classified_detections, predictions):
         detection["classification"] = prediction
-    association = None
     if selector:
-        association = selector.update(
-            associate(frame, detections, crosswalks, cv2), detections, crosswalks
-        )
-        index = association["signal_index"]
+        index = association.get("signal_index")
         classification = detections[index].get("classification") if index is not None else None
+        if association.get("status") != "matched" and selected_index is not None:
+            detections[selected_index]["classification"] = {
+                "class_name": "unknown", "raw_class_name": "unknown",
+                "confidence": None, "trained": False,
+            }
+            classification = None
         association["color"] = (
             classification["class_name"]
             if association["status"] == "matched" and classification
@@ -409,6 +429,17 @@ def run_pipeline(detector, classifier, class_names, trained, frame, args, torch,
         )
     synchronize(torch, torch_device(args.device))
     timing["total_pipeline_wall"] = (time.perf_counter() - pipeline_started) * 1000
+    if selector:
+        visible = [detections[index]] if association.get("status") == "matched" and index is not None else []
+        # Keep the provisional candidate visible only as an explicit unknown,
+        # so the user never hears or sees an unconfirmed color.
+        if not visible and selected_index is not None:
+            visible = [detections[selected_index]]
+            visible[0].setdefault("classification", {
+                "class_name": "unknown", "raw_class_name": "unknown",
+                "confidence": None, "trained": False,
+            })
+        return visible, crosswalks, association, timing
     return detections, crosswalks, association, timing
 
 
