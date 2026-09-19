@@ -1,0 +1,16 @@
+{
+  "base_config": "parts/traffic_light/configs/app_quality.json",
+  "base_config_sha256": "e13775762b207d674f472dafe67c81b01fa4e63d8527256633233f714a988648",
+  "prepared_manifest_sha256": "3f230b359b3ff98d432dd745356ee85eb2b3299d1179d48105d8a94233f6f3ce",
+  "output": "datasets/app_quality_960_q08_resplit_v1",
+  "runs_root": "runs/app_quality_960_q08_resplit_v1",
+  "ratios": [
+    0.8,
+    0.1,
+    0.1
+  ],
+  "seed": 42,
+  "sequence_block_size": 100,
+  "epochs": 50,
+  "patience": 7
+}

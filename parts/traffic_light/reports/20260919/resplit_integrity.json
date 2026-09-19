@@ -1,0 +1,15 @@
+{
+  "detector_images": 36808,
+  "classifier_crops": 14522,
+  "counts": {
+    "val": 3681,
+    "train": 29447,
+    "test": 3680
+  },
+  "group_overlap": 0,
+  "identical_source_overlap": 0,
+  "all_labels_identical_to_original": true,
+  "all_images_and_crops_link_to_original_prepared_bytes": true,
+  "all_classifier_crops_follow_parent_split": true,
+  "training_started": false
+}

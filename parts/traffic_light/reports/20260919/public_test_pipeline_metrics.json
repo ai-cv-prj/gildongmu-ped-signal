@@ -1,0 +1,336 @@
+{
+  "scope": "public_dataset_test_not_real_app",
+  "frames": 45,
+  "gt_counts": {
+    "crosswalk": 121,
+    "pedestrian_signal": 120
+  },
+  "classifier_policy": "fixed_historical",
+  "oracle_color": {
+    "confusion": {
+      "red": {
+        "red": 93,
+        "green": 0,
+        "unknown": 0,
+        "missed": 0,
+        "crop_skipped": 0
+      },
+      "green": {
+        "red": 0,
+        "green": 27,
+        "unknown": 0,
+        "missed": 0,
+        "crop_skipped": 0
+      },
+      "unknown": {
+        "red": 0,
+        "green": 0,
+        "unknown": 0,
+        "missed": 0,
+        "crop_skipped": 0
+      }
+    },
+    "red_gt": 93,
+    "red_to_green_count": 0,
+    "red_to_green_per_gt": 0.0,
+    "red_to_green_per_classified": 0.0,
+    "red_correct_per_gt": 1.0,
+    "green_gt": 27,
+    "green_to_red_count": 0,
+    "green_to_red_per_gt": 0.0,
+    "green_to_red_per_classified": 0.0,
+    "green_correct_per_gt": 1.0
+  },
+  "models": {
+    "historical": {
+      "pedestrian_signal": {
+        "tp": 31,
+        "fp": 0,
+        "fn": 89,
+        "gt": 120,
+        "precision": 1.0,
+        "recall": 0.25833333333333336,
+        "small_gt": 96,
+        "small_tp": 13,
+        "small_recall": 0.13541666666666666,
+        "AP50": 0.7826621510780558,
+        "AP50_95": 0.5129580927963044
+      },
+      "crosswalk": {
+        "tp": 43,
+        "fp": 2,
+        "fn": 78,
+        "gt": 121,
+        "precision": 0.9555555555555556,
+        "recall": 0.35537190082644626,
+        "small_gt": 3,
+        "small_tp": 0,
+        "small_recall": 0.0,
+        "AP50": 0.6699351863640887,
+        "AP50_95": 0.49652624154189445
+      },
+      "color": {
+        "confusion": {
+          "red": {
+            "red": 23,
+            "green": 0,
+            "unknown": 0,
+            "missed": 70,
+            "crop_skipped": 0
+          },
+          "green": {
+            "red": 0,
+            "green": 8,
+            "unknown": 0,
+            "missed": 19,
+            "crop_skipped": 0
+          },
+          "unknown": {
+            "red": 0,
+            "green": 0,
+            "unknown": 0,
+            "missed": 0,
+            "crop_skipped": 0
+          }
+        },
+        "red_gt": 93,
+        "red_to_green_count": 0,
+        "red_to_green_per_gt": 0.0,
+        "red_to_green_per_classified": 0.0,
+        "red_correct_per_gt": 0.24731182795698925,
+        "green_gt": 27,
+        "green_to_red_count": 0,
+        "green_to_red_per_gt": 0.0,
+        "green_to_red_per_classified": 0.0,
+        "green_correct_per_gt": 0.2962962962962963
+      },
+      "raw_color": {
+        "confusion": {
+          "red": {
+            "red": 23,
+            "green": 0,
+            "unknown": 0,
+            "missed": 70,
+            "crop_skipped": 0
+          },
+          "green": {
+            "red": 0,
+            "green": 8,
+            "unknown": 0,
+            "missed": 19,
+            "crop_skipped": 0
+          },
+          "unknown": {
+            "red": 0,
+            "green": 0,
+            "unknown": 0,
+            "missed": 0,
+            "crop_skipped": 0
+          }
+        },
+        "red_gt": 93,
+        "red_to_green_count": 0,
+        "red_to_green_per_gt": 0.0,
+        "red_to_green_per_classified": 0.0,
+        "red_correct_per_gt": 0.24731182795698925,
+        "green_gt": 27,
+        "green_to_red_count": 0,
+        "green_to_red_per_gt": 0.0,
+        "green_to_red_per_classified": 0.0,
+        "green_correct_per_gt": 0.2962962962962963
+      },
+      "latency": {
+        "detector": {
+          "samples": 135,
+          "mean_ms": 7.277635475879328,
+          "p50_ms": 7.038711046334356,
+          "p95_ms": 9.123351168818772
+        },
+        "color_pipeline": {
+          "samples": 135,
+          "mean_ms": 6.565479777270445,
+          "p50_ms": 5.554653995204717,
+          "p95_ms": 19.619772210717187
+        },
+        "total": {
+          "samples": 135,
+          "mean_ms": 13.843115253149774,
+          "p50_ms": 12.87245302228257,
+          "p95_ms": 26.810844888677806
+        }
+      }
+    },
+    "app": {
+      "pedestrian_signal": {
+        "tp": 45,
+        "fp": 0,
+        "fn": 75,
+        "gt": 120,
+        "precision": 1.0,
+        "recall": 0.375,
+        "small_gt": 96,
+        "small_tp": 25,
+        "small_recall": 0.2604166666666667,
+        "AP50": 0.8775811986047769,
+        "AP50_95": 0.5417257836039882
+      },
+      "crosswalk": {
+        "tp": 50,
+        "fp": 1,
+        "fn": 71,
+        "gt": 121,
+        "precision": 0.9803921568627451,
+        "recall": 0.4132231404958678,
+        "small_gt": 3,
+        "small_tp": 0,
+        "small_recall": 0.0,
+        "AP50": 0.7103970716012513,
+        "AP50_95": 0.5545257733436576
+      },
+      "color": {
+        "confusion": {
+          "red": {
+            "red": 35,
+            "green": 0,
+            "unknown": 0,
+            "missed": 58,
+            "crop_skipped": 0
+          },
+          "green": {
+            "red": 0,
+            "green": 10,
+            "unknown": 0,
+            "missed": 17,
+            "crop_skipped": 0
+          },
+          "unknown": {
+            "red": 0,
+            "green": 0,
+            "unknown": 0,
+            "missed": 0,
+            "crop_skipped": 0
+          }
+        },
+        "red_gt": 93,
+        "red_to_green_count": 0,
+        "red_to_green_per_gt": 0.0,
+        "red_to_green_per_classified": 0.0,
+        "red_correct_per_gt": 0.3763440860215054,
+        "green_gt": 27,
+        "green_to_red_count": 0,
+        "green_to_red_per_gt": 0.0,
+        "green_to_red_per_classified": 0.0,
+        "green_correct_per_gt": 0.37037037037037035
+      },
+      "raw_color": {
+        "confusion": {
+          "red": {
+            "red": 35,
+            "green": 0,
+            "unknown": 0,
+            "missed": 58,
+            "crop_skipped": 0
+          },
+          "green": {
+            "red": 0,
+            "green": 10,
+            "unknown": 0,
+            "missed": 17,
+            "crop_skipped": 0
+          },
+          "unknown": {
+            "red": 0,
+            "green": 0,
+            "unknown": 0,
+            "missed": 0,
+            "crop_skipped": 0
+          }
+        },
+        "red_gt": 93,
+        "red_to_green_count": 0,
+        "red_to_green_per_gt": 0.0,
+        "red_to_green_per_classified": 0.0,
+        "red_correct_per_gt": 0.3763440860215054,
+        "green_gt": 27,
+        "green_to_red_count": 0,
+        "green_to_red_per_gt": 0.0,
+        "green_to_red_per_classified": 0.0,
+        "green_correct_per_gt": 0.37037037037037035
+      },
+      "latency": {
+        "detector": {
+          "samples": 135,
+          "mean_ms": 7.5407871114159075,
+          "p50_ms": 7.158604043070227,
+          "p95_ms": 10.200461634667588
+        },
+        "color_pipeline": {
+          "samples": 135,
+          "mean_ms": 8.862338187086776,
+          "p50_ms": 6.614079000428319,
+          "p95_ms": 28.719646733952686
+        },
+        "total": {
+          "samples": 135,
+          "mean_ms": 16.403125298502683,
+          "p50_ms": 13.828916009515524,
+          "p95_ms": 36.477978830225766
+        }
+      }
+    }
+  },
+  "comparisons": {
+    "app_minus_historical": {
+      "pedestrian_signal.small_recall": {
+        "baseline": 0.13541666666666666,
+        "app": 0.2604166666666667,
+        "delta": 0.12500000000000003
+      },
+      "crosswalk.precision": {
+        "baseline": 0.9555555555555556,
+        "app": 0.9803921568627451,
+        "delta": 0.024836601307189454
+      },
+      "crosswalk.recall": {
+        "baseline": 0.35537190082644626,
+        "app": 0.4132231404958678,
+        "delta": 0.05785123966942152
+      },
+      "crosswalk.AP50": {
+        "baseline": 0.6699351863640887,
+        "app": 0.7103970716012513,
+        "delta": 0.040461885237162654
+      },
+      "crosswalk.AP50_95": {
+        "baseline": 0.49652624154189445,
+        "app": 0.5545257733436576,
+        "delta": 0.05799953180176315
+      },
+      "color.red_to_green_per_gt": {
+        "baseline": 0.0,
+        "app": 0.0,
+        "delta": 0.0
+      },
+      "color.green_to_red_per_gt": {
+        "baseline": 0.0,
+        "app": 0.0,
+        "delta": 0.0
+      },
+      "latency.total.mean_ms": {
+        "baseline": 13.843115253149774,
+        "app": 16.403125298502683,
+        "delta": 2.560010045352909
+      },
+      "latency.total.p50_ms": {
+        "baseline": 12.87245302228257,
+        "app": 13.828916009515524,
+        "delta": 0.9564629872329533
+      },
+      "latency.total.p95_ms": {
+        "baseline": 26.810844888677806,
+        "app": 36.477978830225766,
+        "delta": 9.66713394154796
+      }
+    }
+  }
+}

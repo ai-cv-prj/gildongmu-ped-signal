@@ -1,5 +1,16 @@
 # YOLO 검출 → 신호등 색 판별 테스트
 
+2026-09-19 기준 앱 전송 화질(긴 변 최대 960px, 실제 canvas JPEG 0.8) 전처리와
+원본 사전학습 가중치에서의 검출기 재학습, 기존 train/val/test 비교 평가까지 완료했습니다.
+전체 36,808장을 새 train 29,447장 / val 3,681장 / test 3,680장으로 재분할했으며,
+사용자가 **새 분할의 학습을 시작했으며 현재 실행 중**입니다. 완료 결과와 새 test 평가는
+아직 없습니다. 앱 화질 색상 분류기도 재학습하지 않았습니다.
+
+현재 이어서 할 작업과 명령은 [APP_QUALITY_RESPLIT.md](APP_QUALITY_RESPLIT.md)에 있습니다.
+기존 분할 실험 재현은 [APP_QUALITY_EXPERIMENT.md](APP_QUALITY_EXPERIMENT.md),
+평가 수치와 해석은 [전체 분할 평가](DATASET_SPLIT_EVALUATION_20260919.md)와
+[상세 리뷰](DATASET_SPLIT_REVIEW_20260919.md)를 참고하세요.
+
 이 도구는 한 프레임을 다음 순서로 처리하고 각 단계의 시간을 기록합니다.
 
 ```text
@@ -12,8 +23,8 @@
 색 판별에는 학습된 신경망 분류기를 사용합니다. YOLO 기본 가중치는 COCO의 일반
 `traffic light` 위치를 사용합니다. 작은 신호등, 역광, 색 번짐이 심한 환경에서는
 라벨 데이터로 파인튜닝한 검출기와 분류기를 사용하세요.
-COCO `traffic light`는 차량 신호등도 포함하므로 최종 시스템에서는
-`pedestrian_signal` 단일 클래스로 파인튜닝한 YOLO 가중치를 권장합니다.
+COCO `traffic light`는 차량 신호등도 포함합니다. 현재 실험은 `pedestrian_signal`과
+`crosswalk` 2클래스 검출기를 사용하고, 빨강/초록은 별도 색상 분류기로 판별합니다.
 
 ## 폴더 역할
 
@@ -25,12 +36,13 @@ parts/traffic_light/
 ```
 
 서버 코드는 `parts.traffic_light.runtime.pipeline`을 사용하고, 학습이나 영상 테스트는
-`parts/traffic_light/tools/`의 명령을 실행합니다. `data/`는 테스트 영상 보관용이라
-실시간 실행에는 필요하지 않지만 재현 테스트를 위해 현재 유지합니다.
+`parts/traffic_light/tools/`의 명령을 실행합니다. 저장소의 `data/` 테스트 영상 폴더는
+삭제했으므로 영상 테스트에는 별도로 보관한 원본 파일 경로를 지정해야 합니다.
+아래의 `data/...` 경로는 명령 형식 예시이며 현재 저장소에 존재하지 않습니다.
 
-현재 신호등 검출기와 MobileNetV3-Small 색상 분류기의 파인튜닝은 최종 완료된 상태입니다.
-운영 환경에서는 검증된 `best.pt`를 사용하고, `tools/`의 학습 스크립트는 추후 데이터 추가나
-성능 개선이 필요할 때 재학습하기 위한 코드입니다.
+기존 공개 데이터에 대한 신호등 검출기와 MobileNetV3-Small 색상 분류기의 학습은
+완료되었습니다. 다만 휴대폰 촬영에서는 YOLO 신호등 누락이 확인되어 실사용 성능은
+검증되지 않았습니다. 재학습 및 평가 계획은 `PROGRESS.md`에 기록합니다.
 
 ## 설치
 
@@ -46,12 +58,12 @@ python scripts/check_gpu.py
 
 ## 라벨링용 영상 프레임 추출
 
-`data/`의 모든 영상을 초당 3장씩 추출합니다. 영상마다 별도 폴더가 생성되며,
+지정한 영상 또는 영상 폴더에서 초당 3장씩 추출합니다. 영상마다 별도 폴더가 생성되며,
 `manifest.jsonl`에는 원본 영상·프레임 번호·시간 정보가 기록됩니다.
 
 ```bash
 python parts/traffic_light/tools/extract_video_frames.py \
-  --source data \
+  --source "/path/to/video_directory" \
   --output datasets/traffic_light_frames \
   --sample-fps 3
 ```
@@ -60,7 +72,7 @@ python parts/traffic_light/tools/extract_video_frames.py \
 
 ```bash
 python parts/traffic_light/tools/extract_video_frames.py \
-  --source data \
+  --source "/path/to/video_directory" \
   --output datasets/traffic_light_frames_preview \
   --sample-fps 3 \
   --max-frames-per-video 10

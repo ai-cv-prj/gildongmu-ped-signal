@@ -1,0 +1,38 @@
+{
+  "recorded_at_utc": "2026-09-19T06:22:48.186964+00:00",
+  "deleted": [
+    {
+      "path": "datasets/app_quality_960_q08_v1.interrupted_20260918_163608_dfd4ff64",
+      "files": 11786,
+      "bytes": 1282434481
+    },
+    {
+      "path": "runs/app_quality_960_q08_v1/evaluation_public_test_20260919",
+      "files": 3,
+      "bytes": 326661
+    },
+    {
+      "path": "runs/app_quality_960_q08_v1/evaluation_splits_20260919",
+      "files": 2,
+      "bytes": 456399
+    }
+  ],
+  "bytes_removed": 1283217541,
+  "pre_cleanup_symlinks_checked": 141852,
+  "symlinks_referencing_removed_paths": 0,
+  "preserved": [
+    "datasets/app_quality_960_q08_v1",
+    "datasets/app_quality_960_q08_resplit_v1",
+    "all original datasets and model weights",
+    "all final evaluation outputs",
+    "running resplit training outputs"
+  ],
+  "snapshot_sources": {
+    "dataset_split_metrics.json": "runs/app_quality_960_q08_v1/evaluation_splits_20260919_final/report.json",
+    "dataset_split_diagnostics.json": "runs/app_quality_960_q08_v1/evaluation_splits_20260919_final/review_diagnostics.json",
+    "dataset_split_integrity.json": "runs/app_quality_960_q08_v1/evaluation_splits_20260919_final/integrity_audit.json",
+    "public_test_pipeline_metrics.json": "runs/app_quality_960_q08_v1/evaluation_public_test_20260919_final/report.json",
+    "resplit_summary.json": "datasets/app_quality_960_q08_resplit_v1/summary.json",
+    "resplit_integrity.json": "datasets/app_quality_960_q08_resplit_v1/integrity_audit.json"
+  }
+}

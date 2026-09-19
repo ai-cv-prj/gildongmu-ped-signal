@@ -1,0 +1,6 @@
+# Keep the existing CUDA 12.8 torch/torchvision environment (see APP_QUALITY_EXPERIMENT.md).
+ultralytics==8.4.150
+opencv-python==4.14.0.94
+pillow==12.3.0
+PyYAML==6.0.3
+playwright>=1.58,<2

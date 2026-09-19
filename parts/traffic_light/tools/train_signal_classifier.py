@@ -56,6 +56,7 @@ def parse_args(argv=None):
     parser.add_argument("--device", default="0", help="GPU 번호(0), cuda:0 또는 cpu")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--no-pretrained", action="store_true", help="ImageNet 사전학습 가중치 미사용")
+    parser.add_argument("--initial-weights", type=Path, help="명시적인 원본 ImageNet state_dict (분류 head 교체 전 로드)")
     parser.add_argument("--no-class-weights", action="store_true", help="클래스 불균형 보정 미사용")
     parser.add_argument("--amp", action="store_true", help="CUDA mixed precision 학습")
     return parser.parse_args(argv)
@@ -118,15 +119,17 @@ def build_transforms(imgsz, transforms, functional):
     return train_transform, evaluation_transform
 
 
-def build_model(name, class_count, pretrained, torch, models):
+def build_model(name, class_count, pretrained, torch, models, initial_weights=None):
     if name == "mobilenet_v3_small":
-        weights = models.MobileNet_V3_Small_Weights.DEFAULT if pretrained else None
+        weights = models.MobileNet_V3_Small_Weights.DEFAULT if pretrained and initial_weights is None else None
         model = models.mobilenet_v3_small(weights=weights)
     elif name == "efficientnet_b0":
-        weights = models.EfficientNet_B0_Weights.DEFAULT if pretrained else None
+        weights = models.EfficientNet_B0_Weights.DEFAULT if pretrained and initial_weights is None else None
         model = models.efficientnet_b0(weights=weights)
     else:
         raise ValueError(f"지원하지 않는 모델입니다: {name}")
+    if initial_weights is not None:
+        model.load_state_dict(torch.load(initial_weights, map_location="cpu", weights_only=True), strict=True)
     input_features = model.classifier[-1].in_features
     model.classifier[-1] = torch.nn.Linear(input_features, class_count)
     return model
@@ -220,7 +223,11 @@ def run_epoch(model, loader, criterion, device, torch, optimizer=None, scaler=No
 def train_one(name, train_dataset, val_dataset, test_dataset, args, torch, models):
     device = torch_device(args.device)
     set_seed(args.seed, torch)
-    model = build_model(name, len(train_dataset.classes), not args.no_pretrained, torch, models)
+    initial_weights = getattr(args, "initial_weights", None)
+    if initial_weights is None:
+        model = build_model(name, len(train_dataset.classes), not args.no_pretrained, torch, models)
+    else:
+        model = build_model(name, len(train_dataset.classes), not args.no_pretrained, torch, models, initial_weights)
     model = model.to(device)
     weights = None if args.no_class_weights else balanced_weights(train_dataset, torch).to(device)
     criterion = torch.nn.CrossEntropyLoss(weight=weights)
@@ -314,6 +321,8 @@ def train_one(name, train_dataset, val_dataset, test_dataset, args, torch, model
 
 def main(argv=None):
     args = parse_args(argv)
+    if args.initial_weights and (args.no_pretrained or args.model == "both"):
+        raise ValueError("--initial-weights는 단일 모델의 사전학습에만 사용할 수 있습니다.")
     args.data = args.data.expanduser().resolve()
     output_base = args.output.expanduser().resolve()
     run_name = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "_" + uuid4().hex[:8]
@@ -322,6 +331,9 @@ def main(argv=None):
     if args.amp and not device.startswith("cuda"):
         raise ValueError("--amp는 CUDA에서만 사용할 수 있습니다.")
     args.output.mkdir(parents=True, exist_ok=False)
+    (args.output / "args.json").write_text(
+        json.dumps(vars(args), default=str, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     try:
         import torch
