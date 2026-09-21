@@ -7,9 +7,44 @@ import unittest
 
 from parts.traffic_light.tools.app_quality_common import read_json, rows, sha256, write_json
 from parts.traffic_light.tools.resplit_app_quality import allocate, grouped_indices, label_features, prepare, sequence_key
+from parts.traffic_light.tools.evaluate_dataset_splits import evaluate, verify_resplit
 
 
 class ResplitTests(unittest.TestCase):
+    def test_resplit_evaluation_rejects_historical_before_loading_models(self):
+        with self.assertRaises(ValueError):
+            evaluate({}, None, ['test'], ['historical'], 16, 4, resplit={})
+
+    def test_resplit_evaluation_rejects_changed_data(self):
+        with tempfile.TemporaryDirectory() as temp:
+            config, resplit, root = self.evaluation_fixture(Path(temp))
+            self.assertTrue(verify_resplit(config, resplit)['complete'])
+            (root/'detector_app/data.yaml').write_text('changed data path')
+            with self.assertRaises(ValueError):
+                verify_resplit(config, resplit)
+
+    def test_resplit_evaluation_rejects_group_leakage(self):
+        with tempfile.TemporaryDirectory() as temp:
+            config, resplit, root = self.evaluation_fixture(Path(temp), shared_group=True)
+            with self.assertRaisesRegex(ValueError, '중복'):
+                verify_resplit(config, resplit)
+
+    @staticmethod
+    def evaluation_fixture(root, shared_group=False):
+        det=root/'detector_app'; det.mkdir()
+        audit=root/'runs/audit/detector_app'; audit.mkdir(parents=True)
+        records=[{'split':s,'group':'shared' if shared_group else s,'source_sha256':s}
+                 for s in ['train','val','test']]
+        (det/'manifest.jsonl').write_text(''.join(json.dumps(r)+'\n' for r in records))
+        (det/'data.yaml').write_text('fixture')
+        resplit={'output':str(root),'runs_root':str(root/'runs')}
+        write_json(root/'summary.json',{'complete':True,'config':resplit,
+                   'statistics':{s:{'images':1} for s in ['train','val','test']},
+                   'detector_manifest_sha256':sha256(det/'manifest.jsonl'),
+                   'data_yaml_sha256':sha256(det/'data.yaml')})
+        write_json(audit/'provenance.json',{'config':resplit,'summary_sha256':sha256(root/'summary.json')})
+        return {'prepared_root':str(root),'runs_root':str(root/'runs')},resplit,root
+
     def test_sequence_names(self):
         self.assertEqual(sequence_key('/x/MP_KSC_P000101.jpg', 100), 'MP_KSC_P:1')
         self.assertEqual(sequence_key('/x/MP_SEL_000199.jpg', 100), 'MP_SEL_:1')

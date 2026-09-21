@@ -3,10 +3,11 @@
 2026-09-19 기준 앱 전송 화질(긴 변 최대 960px, 실제 canvas JPEG 0.8) 전처리와
 원본 사전학습 가중치에서의 검출기 재학습, 기존 train/val/test 비교 평가까지 완료했습니다.
 전체 36,808장을 새 train 29,447장 / val 3,681장 / test 3,680장으로 재분할했으며,
-사용자가 **새 분할의 학습을 시작했으며 현재 실행 중**입니다. 완료 결과와 새 test 평가는
-아직 없습니다. 앱 화질 색상 분류기도 재학습하지 않았습니다.
+2026-09-21에 **새 분할의 50 epoch 학습 완료와 val/test 전체 평가**를 확인했습니다.
+최신 mAP50–95는 val 84.41%, test 84.10%이며, 상세 결과는
+[재분할 모델 평가](RESPLIT_EVALUATION_20260921.md)에 있습니다. 앱 화질 색상 분류기는 재학습하지 않았습니다.
 
-현재 이어서 할 작업과 명령은 [APP_QUALITY_RESPLIT.md](APP_QUALITY_RESPLIT.md)에 있습니다.
+새 분할 실험의 실행 명령은 [APP_QUALITY_RESPLIT.md](APP_QUALITY_RESPLIT.md)에 있습니다.
 기존 분할 실험 재현은 [APP_QUALITY_EXPERIMENT.md](APP_QUALITY_EXPERIMENT.md),
 평가 수치와 해석은 [전체 분할 평가](DATASET_SPLIT_EVALUATION_20260919.md)와
 [상세 리뷰](DATASET_SPLIT_REVIEW_20260919.md)를 참고하세요.

@@ -11,7 +11,36 @@ from .app_quality_common import DEFAULT_CONFIG, new_directory, read_json, resolv
 from .app_quality_metrics import detection_metrics, ratio
 
 
-def evaluate(config, output, splits, arms, batch, workers):
+def verify_resplit(config, resplit):
+    """Verify the exact dataset used in training and prevent split/group leakage."""
+    prepared = resolve(config["prepared_root"])
+    root = prepared / "detector_app"
+    summary = read_json(prepared / "summary.json")
+    provenance = read_json(resolve(config["runs_root"]) / "audit/detector_app/provenance.json")
+    if (not summary["complete"] or summary["config"] != resplit or provenance["config"] != resplit
+            or provenance["summary_sha256"] != sha256(prepared / "summary.json")):
+        raise ValueError("재분할/학습 당시 설정 또는 요약 해시가 다릅니다.")
+    for name, key in (("manifest.jsonl", "detector_manifest_sha256"), ("data.yaml", "data_yaml_sha256")):
+        if sha256(root / name) != summary[key]:
+            raise ValueError(f"학습 이후 재분할 파일이 변경됐습니다: {name}")
+    membership = {}
+    counts = Counter()
+    for row in rows(root / "manifest.jsonl"):
+        if row["split"] not in {"train", "val", "test"}:
+            raise ValueError("잘못된 데이터 분할")
+        counts[row["split"]] += 1
+        for key in ("group:" + row["group"], "sha:" + row["source_sha256"]):
+            if key in membership and membership[key] != row["split"]:
+                raise ValueError("재분할 간 동일 이미지/그룹 중복이 있습니다.")
+            membership[key] = row["split"]
+    if dict(counts) != {s: v["images"] for s, v in summary["statistics"].items()}:
+        raise ValueError("재분할 이미지 수가 완료 기록과 다릅니다.")
+    return summary
+
+
+def evaluate(config, output, splits, arms, batch, workers, resplit=None):
+    if resplit is not None and list(arms) != ["app"]:
+        raise ValueError("새 test에는 기존 모델의 학습 데이터가 포함됩니다. 재분할 모델 app만 평가하세요.")
     import torch
     from ultralytics import YOLO
     from ultralytics.models.yolo.detect.val import DetectionValidator
@@ -22,15 +51,18 @@ def evaluate(config, output, splits, arms, batch, workers):
     settings = config["evaluation"]
     prepared = resolve(config["prepared_root"])
     root = prepared / "detector_app"
-    summary = read_json(prepared / "summary.json")
-    source_manifest = resolve(config["detector"]["source_dataset"]) / "manifest.jsonl"
-    if not summary["complete"] or sha256(source_manifest) != summary["detector_manifest_sha256"]:
-        raise ValueError("전처리 완료 상태/manifest 해시 불일치")
+    summary = verify_resplit(config, resplit) if resplit is not None else read_json(prepared / "summary.json")
+    if resplit is None:
+        source_manifest = resolve(config["detector"]["source_dataset"]) / "manifest.jsonl"
+        if not summary["complete"] or sha256(source_manifest) != summary["detector_manifest_sha256"]:
+            raise ValueError("전처리 완료 상태/manifest 해시 불일치")
     counts = Counter()
     for row in rows(root / "manifest.jsonl"):
         counts[row["split"]] += 1
         if row["split"] in splits and sha256(root / row["label"]) != row["label_sha256"]:
             raise ValueError(f"전처리 후 라벨이 변경되었습니다: {row['label']}")
+        if resplit is not None and row["split"] in splits and sha256(root / row["image"]) != row["transport_sha256"]:
+            raise ValueError(f"학습 후 이미지가 변경되었습니다: {row['image']}")
     paths = {"historical": resolve(config["detector"]["historical_weights"]),
              "app": resolve(config["runs_root"]) / "detector/app/weights/best.pt"}
     audit = read_json(resolve(config["runs_root"]) / "audit/detector_app/complete.json")
@@ -46,14 +78,19 @@ def evaluate(config, output, splits, arms, batch, workers):
                       save_txt=False, verbose=False, project=str(output), exist_ok=False)
     report = {"scope": "full_prepared_dataset_splits_detection_only", "environment": environment,
               "config": config, "validation_args": validation, "split_image_counts": dict(counts),
-              "source_manifest_sha256": summary["detector_manifest_sha256"],
+              "source_manifest_sha256": summary["detector_manifest_sha256"] if resplit is None else None,
               "prepared_manifest_sha256": sha256(root / "manifest.jsonl"),
+              "preparation_summary_sha256": sha256(prepared / "summary.json"),
+              "resplit_config": resplit,
               "weights": {arm: {"path": str(paths[arm]), "sha256": expected[arm]} for arm in arms},
               "notes": ["train measures fitting, val was used for model selection, test is held out",
                         "AP: Ultralytics official metric at conf=.001; operational: score-ordered matching",
                         "small: GT area <1024 pixels in decoded prepared image, before model letterbox",
                         "speed is batched detector only; excludes decoding, I/O, color classifier and app network",
                         "No color classifier evaluation or training in this run"], "results": {}}
+    if resplit is not None:
+        report["scope"] = "resplit_validation_test_detection_only" if "train" not in splits else "resplit_full_splits_detection_only"
+        report["notes"].extend(summary["limitations"])
     write_json(output / "report.json", report)
     for split in splits:
         report["results"][split] = {}
@@ -116,14 +153,28 @@ def evaluate(config, output, splits, arms, batch, workers):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    source.add_argument("--resplit-config", type=Path, help="재분할 설정: 기존 모델 비교 없이 새 모델만 평가")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--splits", nargs="+", choices=("train", "val", "test"), default=["val", "test", "train"])
-    parser.add_argument("--models", nargs="+", choices=("historical", "app"), default=["historical", "app"])
+    parser.add_argument("--splits", nargs="+", choices=("train", "val", "test"))
+    parser.add_argument("--models", nargs="+", choices=("historical", "app"))
     parser.add_argument("--batch", type=int, default=16)
     parser.add_argument("--workers", type=int, default=4)
     args = parser.parse_args()
-    evaluate(read_json(args.config), args.output.resolve(), args.splits, args.models, args.batch, args.workers)
+    resplit = None
+    if args.resplit_config:
+        from .resplit_app_quality import load_base
+        resplit = read_json(args.resplit_config)
+        config = load_base(resplit)
+        config.update(prepared_root=resplit["output"], runs_root=resplit["runs_root"])
+        splits, arms = args.splits or ["val", "test"], args.models or ["app"]
+        if arms != ["app"]:
+            parser.error("재분할 평가에는 --models app만 사용할 수 있습니다.")
+    else:
+        config = read_json(args.config)
+        splits, arms = args.splits or ["val", "test", "train"], args.models or ["historical", "app"]
+    evaluate(config, args.output.resolve(), splits, arms, args.batch, args.workers, resplit=resplit)
 
 
 if __name__ == "__main__":

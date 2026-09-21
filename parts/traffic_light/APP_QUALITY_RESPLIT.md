@@ -1,6 +1,6 @@
 # 앱 화질 데이터 재분할
 
-기존 train·val·test 총 36,808장을 합쳐 약 80:10:10으로 새로 분할했다. 신호등/횡단보도 라벨 개수, 신호등 크기 구간, 이전 분할의 구성 비율을 함께 고려했다. 원본 분할·라벨·모델은 보존했다. 재분할을 전달한 뒤 사용자가 학습을 시작했으며, 2026-09-19 문서 정리 시 실행 중이다. 완료된 새 모델과 새 분할 성능 평가는 아직 없다.
+기존 train·val·test 총 36,808장을 합쳐 약 80:10:10으로 새로 분할했다. 신호등/횡단보도 라벨 개수, 신호등 크기 구간, 이전 분할의 구성 비율을 함께 고려했다. 원본 분할·라벨·모델은 보존했다. 사용자가 실행한 50 epoch 학습이 완료됐으며, 2026-09-21에 48 epoch의 best.pt로 새 val/test 전체를 평가했다. 결과는 [재분할 모델 평가](RESPLIT_EVALUATION_20260921.md)에 있다.
 
 | 분할 | 이미지 | 신호등 박스 | 횡단보도 박스 | 신호등 2개 이상 라벨링된 이미지 |
 |---|---:|---:|---:|---:|
@@ -27,7 +27,7 @@ seed=42로 재현 가능하게 배정했다. 동일 원본 SHA-256과 파일명 
 
 ## 학습 실행
 
-현재 학습이 실행 중이므로 아래 명령을 중복 실행하지 않는다. 다른 실행을 재현할 때는 새 출력 경로를 사용한다.
+현재 경로의 학습은 완료됐으므로 아래 명령을 같은 출력 경로에 다시 실행하지 않는다. 다른 실행을 재현할 때는 새 출력 경로를 사용한다.
 
 프로젝트 루트에서 기존 `.venv`를 사용한다. 추가 패키지는 필요 없다. 환경은 기존 실험과 같은 ultralytics 8.4.150, torch 2.11.0+cu128, torchvision 0.26.0+cu128, opencv-python 4.14.0.94, Pillow 12.3.0, PyYAML 6.0.3을 확인하도록 되어 있다.
 
@@ -48,18 +48,16 @@ cd /home/user/ai_cv_prj
 
 ## 학습 완료 후 test 평가 명령
 
-다음 명령은 준비만 했으며 실행하지 않았다. 새 모델의 신호등/횡단보도 공식 AP를 새 test에서 평가한다.
+실제 완료한 평가는 다음 명령으로 재현한다. 공식 AP와 confidence=0.4 precision/recall, 작은 신호등 recall 및 이미지별 예측을 함께 저장한다. 출력에는 새 경로를 사용한다.
 
 ```bash
-.venv/bin/yolo detect val \
-  model=runs/app_quality_960_q08_resplit_v1/detector/app/weights/best.pt \
-  data=datasets/app_quality_960_q08_resplit_v1/detector_app/data.yaml \
-  split=test imgsz=960 batch=16 workers=4 device=0 \
-  conf=0.001 iou=0.7 max_det=300 quantize=32 rect=True plots=True \
-  project=runs/app_quality_960_q08_resplit_v1/evaluation name=test
+.venv/bin/python -m parts.traffic_light.tools.evaluate_dataset_splits \
+  --resplit-config parts/traffic_light/configs/app_quality_resplit.json \
+  --splits val test --models app \
+  --output runs/app_quality_960_q08_resplit_v1/evaluation_new
 ```
 
-이 명령의 P/R은 validator가 F1 기준으로 선택한 confidence에서의 값이다. 고정 confidence=0.4의 recall과 혼동하지 않는다. 임계값을 고를 때는 val을 사용하고 test 점수로 설정을 맞추지 않는다. 기존 `evaluate_dataset_splits`의 기본 설정은 이전 분할을 가리키므로 새 실험 평가에 그대로 사용하지 않는다.
+결과의 `official` P/R은 validator가 F1 기준으로 선택한 confidence에서의 값이다. `operational`에는 고정 confidence=0.4 지표를 별도로 저장한다. 임계값을 고를 때는 val을 사용하고 test 점수로 설정을 맞추지 않는다. `--resplit-config`를 생략하면 기본 설정이 이전 분할을 가리키므로 반드시 지정한다. 재분할 평가는 기존 학습 이미지가 포함된 test에서의 부적절한 비교를 막기 위해 `--models app`만 허용한다.
 
 ## 파일 위치
 

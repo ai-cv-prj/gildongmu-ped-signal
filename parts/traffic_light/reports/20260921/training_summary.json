@@ -1,0 +1,8 @@
+{
+  "completed_epochs": 50,
+  "best_epoch": 48,
+  "training_seconds": 18522.0,
+  "best_logged_val_map50_95": 0.83913,
+  "best_weight_sha256": "d530a19b53570988ded114defdbd77af51d0ad06228cad38b7464c9758da42aa",
+  "metrics_scope": "newly executed FP32 batch16 validation/test of best.pt; not training-log metrics"
+}

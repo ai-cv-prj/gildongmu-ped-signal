@@ -1,0 +1,384 @@
+{
+  "val": {
+    "all": {
+      "images": 3681,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 1390,
+          "fp": 205,
+          "fn": 60,
+          "gt": 1450,
+          "precision": 0.8714733542319749,
+          "recall": 0.9586206896551724,
+          "small_gt": 1170,
+          "small_tp": 1120,
+          "small_recall": 0.9572649572649573
+        },
+        "crosswalk": {
+          "tp": 3618,
+          "fp": 80,
+          "fn": 92,
+          "gt": 3710,
+          "precision": 0.9783666846944294,
+          "recall": 0.9752021563342318,
+          "small_gt": 36,
+          "small_tp": 25,
+          "small_recall": 0.6944444444444444
+        }
+      }
+    },
+    "previous_test": {
+      "images": 5,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 8,
+          "fp": 1,
+          "fn": 6,
+          "gt": 14,
+          "precision": 0.8888888888888888,
+          "recall": 0.5714285714285714,
+          "small_gt": 12,
+          "small_tp": 6,
+          "small_recall": 0.5
+        },
+        "crosswalk": {
+          "tp": 8,
+          "fp": 0,
+          "fn": 6,
+          "gt": 14,
+          "precision": 1.0,
+          "recall": 0.5714285714285714,
+          "small_gt": 0,
+          "small_tp": 0,
+          "small_recall": null
+        }
+      }
+    },
+    "multi_signal": {
+      "images": 29,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 52,
+          "fp": 1,
+          "fn": 11,
+          "gt": 63,
+          "precision": 0.9811320754716981,
+          "recall": 0.8253968253968254,
+          "small_gt": 49,
+          "small_tp": 39,
+          "small_recall": 0.7959183673469388
+        },
+        "crosswalk": {
+          "tp": 42,
+          "fp": 2,
+          "fn": 12,
+          "gt": 54,
+          "precision": 0.9545454545454546,
+          "recall": 0.7777777777777778,
+          "small_gt": 0,
+          "small_tp": 0,
+          "small_recall": null
+        }
+      }
+    },
+    "previous_train": {
+      "images": 3619,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 1313,
+          "fp": 203,
+          "fn": 43,
+          "gt": 1356,
+          "precision": 0.8660949868073878,
+          "recall": 0.9682890855457227,
+          "small_gt": 1091,
+          "small_tp": 1057,
+          "small_recall": 0.9688359303391384
+        },
+        "crosswalk": {
+          "tp": 3526,
+          "fp": 78,
+          "fn": 59,
+          "gt": 3585,
+          "precision": 0.9783573806881243,
+          "recall": 0.9835425383542539,
+          "small_gt": 35,
+          "small_tp": 25,
+          "small_recall": 0.7142857142857143
+        }
+      }
+    },
+    "single_signal": {
+      "images": 1387,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 1338,
+          "fp": 28,
+          "fn": 49,
+          "gt": 1387,
+          "precision": 0.9795021961932651,
+          "recall": 0.9646719538572458,
+          "small_gt": 1121,
+          "small_tp": 1081,
+          "small_recall": 0.9643175735950045
+        },
+        "crosswalk": {
+          "tp": 1339,
+          "fp": 33,
+          "fn": 35,
+          "gt": 1374,
+          "precision": 0.9759475218658892,
+          "recall": 0.9745269286754003,
+          "small_gt": 11,
+          "small_tp": 4,
+          "small_recall": 0.36363636363636365
+        }
+      }
+    },
+    "no_signal": {
+      "images": 2265,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 0,
+          "fp": 176,
+          "fn": 0,
+          "gt": 0,
+          "precision": 0.0,
+          "recall": null,
+          "small_gt": 0,
+          "small_tp": 0,
+          "small_recall": null
+        },
+        "crosswalk": {
+          "tp": 2237,
+          "fp": 45,
+          "fn": 45,
+          "gt": 2282,
+          "precision": 0.9802804557405784,
+          "recall": 0.9802804557405784,
+          "small_gt": 25,
+          "small_tp": 21,
+          "small_recall": 0.84
+        }
+      }
+    },
+    "previous_val": {
+      "images": 57,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 69,
+          "fp": 1,
+          "fn": 11,
+          "gt": 80,
+          "precision": 0.9857142857142858,
+          "recall": 0.8625,
+          "small_gt": 67,
+          "small_tp": 57,
+          "small_recall": 0.8507462686567164
+        },
+        "crosswalk": {
+          "tp": 84,
+          "fp": 2,
+          "fn": 27,
+          "gt": 111,
+          "precision": 0.9767441860465116,
+          "recall": 0.7567567567567568,
+          "small_gt": 1,
+          "small_tp": 0,
+          "small_recall": 0.0
+        }
+      }
+    }
+  },
+  "test": {
+    "all": {
+      "images": 3680,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 1397,
+          "fp": 207,
+          "fn": 52,
+          "gt": 1449,
+          "precision": 0.8709476309226932,
+          "recall": 0.9641131815044859,
+          "small_gt": 1170,
+          "small_tp": 1126,
+          "small_recall": 0.9623931623931624
+        },
+        "crosswalk": {
+          "tp": 3610,
+          "fp": 87,
+          "fn": 100,
+          "gt": 3710,
+          "precision": 0.9764674060048688,
+          "recall": 0.9730458221024259,
+          "small_gt": 34,
+          "small_tp": 22,
+          "small_recall": 0.6470588235294118
+        }
+      }
+    },
+    "previous_test": {
+      "images": 5,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 13,
+          "fp": 0,
+          "fn": 1,
+          "gt": 14,
+          "precision": 1.0,
+          "recall": 0.9285714285714286,
+          "small_gt": 11,
+          "small_tp": 10,
+          "small_recall": 0.9090909090909091
+        },
+        "crosswalk": {
+          "tp": 9,
+          "fp": 0,
+          "fn": 5,
+          "gt": 14,
+          "precision": 1.0,
+          "recall": 0.6428571428571429,
+          "small_gt": 0,
+          "small_tp": 0,
+          "small_recall": null
+        }
+      }
+    },
+    "multi_signal": {
+      "images": 30,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 53,
+          "fp": 5,
+          "fn": 11,
+          "gt": 64,
+          "precision": 0.9137931034482759,
+          "recall": 0.828125,
+          "small_gt": 54,
+          "small_tp": 43,
+          "small_recall": 0.7962962962962963
+        },
+        "crosswalk": {
+          "tp": 46,
+          "fp": 5,
+          "fn": 8,
+          "gt": 54,
+          "precision": 0.9019607843137255,
+          "recall": 0.8518518518518519,
+          "small_gt": 0,
+          "small_tp": 0,
+          "small_recall": null
+        }
+      }
+    },
+    "previous_train": {
+      "images": 3619,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 1320,
+          "fp": 200,
+          "fn": 36,
+          "gt": 1356,
+          "precision": 0.868421052631579,
+          "recall": 0.9734513274336283,
+          "small_gt": 1090,
+          "small_tp": 1062,
+          "small_recall": 0.9743119266055046
+        },
+        "crosswalk": {
+          "tp": 3524,
+          "fp": 82,
+          "fn": 67,
+          "gt": 3591,
+          "precision": 0.9772601220188575,
+          "recall": 0.9813422445001392,
+          "small_gt": 33,
+          "small_tp": 22,
+          "small_recall": 0.6666666666666666
+        }
+      }
+    },
+    "single_signal": {
+      "images": 1385,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 1344,
+          "fp": 30,
+          "fn": 41,
+          "gt": 1385,
+          "precision": 0.9781659388646288,
+          "recall": 0.9703971119133574,
+          "small_gt": 1116,
+          "small_tp": 1083,
+          "small_recall": 0.9704301075268817
+        },
+        "crosswalk": {
+          "tp": 1325,
+          "fp": 31,
+          "fn": 43,
+          "gt": 1368,
+          "precision": 0.9771386430678466,
+          "recall": 0.9685672514619883,
+          "small_gt": 6,
+          "small_tp": 4,
+          "small_recall": 0.6666666666666666
+        }
+      }
+    },
+    "no_signal": {
+      "images": 2265,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 0,
+          "fp": 172,
+          "fn": 0,
+          "gt": 0,
+          "precision": 0.0,
+          "recall": null,
+          "small_gt": 0,
+          "small_tp": 0,
+          "small_recall": null
+        },
+        "crosswalk": {
+          "tp": 2239,
+          "fp": 51,
+          "fn": 49,
+          "gt": 2288,
+          "precision": 0.9777292576419214,
+          "recall": 0.978583916083916,
+          "small_gt": 28,
+          "small_tp": 18,
+          "small_recall": 0.6428571428571429
+        }
+      }
+    },
+    "previous_val": {
+      "images": 56,
+      "metrics": {
+        "pedestrian_signal": {
+          "tp": 64,
+          "fp": 7,
+          "fn": 15,
+          "gt": 79,
+          "precision": 0.9014084507042254,
+          "recall": 0.810126582278481,
+          "small_gt": 69,
+          "small_tp": 54,
+          "small_recall": 0.782608695652174
+        },
+        "crosswalk": {
+          "tp": 77,
+          "fp": 5,
+          "fn": 28,
+          "gt": 105,
+          "precision": 0.9390243902439024,
+          "recall": 0.7333333333333333,
+          "small_gt": 1,
+          "small_tp": 0,
+          "small_recall": 0.0
+        }
+      }
+    }
+  }
+}
