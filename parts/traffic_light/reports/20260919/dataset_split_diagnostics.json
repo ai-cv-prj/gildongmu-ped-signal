@@ -1,0 +1,201 @@
+{
+  "train": {
+    "paired": {
+      "pedestrian_signal": {
+        "both": 12878,
+        "lost": 50,
+        "both_missed": 332,
+        "recovered": 334
+      },
+      "crosswalk": {
+        "both": 35289,
+        "recovered": 200,
+        "both_missed": 364,
+        "lost": 76
+      }
+    },
+    "signal_size_sqrt_area_px": {
+      "16-32": {
+        "gt": 9180,
+        "historical_tp": 8846,
+        "app_tp": 8977
+      },
+      ">=32": {
+        "gt": 2609,
+        "historical_tp": 2521,
+        "app_tp": 2557
+      },
+      "8-16": {
+        "gt": 1787,
+        "historical_tp": 1556,
+        "app_tp": 1668
+      },
+      "<8": {
+        "gt": 18,
+        "historical_tp": 5,
+        "app_tp": 10
+      }
+    },
+    "frames": {
+      "pedestrian_signal": {
+        "gt_frames": 13585,
+        "multiple_gt_frames": 9,
+        "historical_no_gt_detected": 658,
+        "historical_all_gt_detected": 12919,
+        "app_no_gt_detected": 374,
+        "app_all_gt_detected": 13203
+      },
+      "crosswalk": {
+        "gt_frames": 35715,
+        "multiple_gt_frames": 214,
+        "historical_no_gt_detected": 398,
+        "historical_all_gt_detected": 35157,
+        "app_no_gt_detected": 275,
+        "app_all_gt_detected": 35279
+      }
+    },
+    "mean_iou_on_same_gt_detected_by_both": {
+      "pedestrian_signal": {
+        "count": 12878,
+        "historical": 0.8911655789452944,
+        "app": 0.8924824072568948
+      },
+      "crosswalk": {
+        "count": 35289,
+        "historical": 0.9558470539909731,
+        "app": 0.9638990412793863
+      }
+    }
+  },
+  "val": {
+    "paired": {
+      "pedestrian_signal": {
+        "both": 426,
+        "both_missed": 286,
+        "recovered": 74,
+        "lost": 22
+      },
+      "crosswalk": {
+        "both_missed": 431,
+        "both": 563,
+        "recovered": 46,
+        "lost": 19
+      }
+    },
+    "signal_size_sqrt_area_px": {
+      "8-16": {
+        "gt": 177,
+        "historical_tp": 44,
+        "app_tp": 61
+      },
+      "16-32": {
+        "gt": 476,
+        "historical_tp": 266,
+        "app_tp": 294
+      },
+      ">=32": {
+        "gt": 152,
+        "historical_tp": 138,
+        "app_tp": 145
+      },
+      "<8": {
+        "gt": 3,
+        "historical_tp": 0,
+        "app_tp": 0
+      }
+    },
+    "frames": {
+      "pedestrian_signal": {
+        "gt_frames": 542,
+        "multiple_gt_frames": 257,
+        "historical_no_gt_detected": 140,
+        "historical_all_gt_detected": 216,
+        "app_no_gt_detected": 121,
+        "app_all_gt_detected": 259
+      },
+      "crosswalk": {
+        "gt_frames": 558,
+        "multiple_gt_frames": 455,
+        "historical_no_gt_detected": 10,
+        "historical_all_gt_detected": 128,
+        "app_no_gt_detected": 8,
+        "app_all_gt_detected": 152
+      }
+    },
+    "mean_iou_on_same_gt_detected_by_both": {
+      "pedestrian_signal": {
+        "count": 426,
+        "historical": 0.8711920392000861,
+        "app": 0.8703989267021683
+      },
+      "crosswalk": {
+        "count": 563,
+        "historical": 0.9443409701206089,
+        "app": 0.9579463902557099
+      }
+    }
+  },
+  "test": {
+    "paired": {
+      "pedestrian_signal": {
+        "both_missed": 72,
+        "both": 35,
+        "recovered": 12,
+        "lost": 1
+      },
+      "crosswalk": {
+        "both": 45,
+        "both_missed": 65,
+        "recovered": 10,
+        "lost": 1
+      }
+    },
+    "signal_size_sqrt_area_px": {
+      ">=32": {
+        "gt": 24,
+        "historical_tp": 19,
+        "app_tp": 20
+      },
+      "16-32": {
+        "gt": 65,
+        "historical_tp": 12,
+        "app_tp": 20
+      },
+      "8-16": {
+        "gt": 31,
+        "historical_tp": 5,
+        "app_tp": 7
+      }
+    },
+    "frames": {
+      "pedestrian_signal": {
+        "gt_frames": 45,
+        "multiple_gt_frames": 44,
+        "historical_no_gt_detected": 12,
+        "historical_all_gt_detected": 0,
+        "app_no_gt_detected": 11,
+        "app_all_gt_detected": 2
+      },
+      "crosswalk": {
+        "gt_frames": 45,
+        "multiple_gt_frames": 45,
+        "historical_no_gt_detected": 1,
+        "historical_all_gt_detected": 0,
+        "app_no_gt_detected": 0,
+        "app_all_gt_detected": 3
+      }
+    },
+    "mean_iou_on_same_gt_detected_by_both": {
+      "pedestrian_signal": {
+        "count": 35,
+        "historical": 0.8581053550544886,
+        "app": 0.8454446787588679
+      },
+      "crosswalk": {
+        "count": 45,
+        "historical": 0.9304835464647582,
+        "app": 0.944089903837935
+      }
+    }
+  }
+}

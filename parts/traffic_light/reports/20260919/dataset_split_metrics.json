@@ -1,0 +1,523 @@
+{
+  "scope": "full_prepared_dataset_splits_detection_only",
+  "environment": {
+    "ultralytics": "8.4.150",
+    "torch": "2.11.0+cu128",
+    "torchvision": "0.26.0+cu128",
+    "opencv-python": "4.14.0.94",
+    "pillow": "12.3.0",
+    "PyYAML": "6.0.3"
+  },
+  "config": {
+    "prepared_root": "datasets/app_quality_960_q08_v1",
+    "runs_root": "runs/app_quality_960_q08_v1",
+    "transport": {
+      "max_side": 960,
+      "quality": 0.8
+    },
+    "environment": {
+      "ultralytics": "8.4.150",
+      "torch": "2.11.0+cu128",
+      "torchvision": "0.26.0+cu128",
+      "opencv-python": "4.14.0.94",
+      "pillow": "12.3.0",
+      "PyYAML": "6.0.3"
+    },
+    "detector": {
+      "source_dataset": "datasets/intersection_signal_crosswalk_yolo",
+      "reference_args": "parts/traffic_light/configs/app_quality_detector_reference.json",
+      "reference_run_args": "runs/traffic_light_crosswalk_detector/횡단보도 추가 학습/args.yaml",
+      "reference_args_sha256": "7043db28bcc59bb3fd60045365368117096f2448de4b7f0dfa3ecd95da8c8e63",
+      "initial_weights": "yolo26s.pt",
+      "initial_sha256": "646f8bc3fe0a656803d95c294f7852321748cb29d13466a1af8862e2db384a1b",
+      "historical_weights": "runs/traffic_light_crosswalk_detector/횡단보도 추가 학습/weights/best.pt",
+      "historical_sha256": "df5aa579ac5551e0076aa27b968cf8a92f34725d5602e519c7d63e94b98cf642",
+      "reference_snapshot_sha256": "b2be9b7379b4c5d7f2974c80ddedd88c4cc25aeef1dc78ec1fa675daad937209"
+    },
+    "classifier": {
+      "source_dataset": "datasets/intersection_signal_classifier",
+      "initial_weights": ".torch-cache/hub/checkpoints/mobilenet_v3_small-047dcff4.pth",
+      "initial_sha256": "047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f",
+      "historical_weights": "runs/traffic_light_classifier/20260915T085300Z_3f63cc9d/mobilenet_v3_small/best.pt",
+      "historical_sha256": "e3fb14c1efd89686be7f03fba98f5aac34c57430436d1e1415fc448f25745098",
+      "settings_provenance": "Reconstructed from existing script defaults and documented command; historical full CLI config was not saved.",
+      "args": {
+        "model": "mobilenet_v3_small",
+        "epochs": 30,
+        "batch_size": 64,
+        "imgsz": 224,
+        "learning_rate": 0.001,
+        "weight_decay": 0.0001,
+        "patience": 7,
+        "workers": 4,
+        "device": "0",
+        "seed": 42,
+        "amp": true,
+        "no_class_weights": false,
+        "no_pretrained": false
+      }
+    },
+    "evaluation": {
+      "manifest": "datasets/app_holdout/manifest.jsonl",
+      "output": "runs/app_quality_960_q08_v1/evaluation",
+      "device": "0",
+      "imgsz": 960,
+      "conf": 0.4,
+      "crosswalk_conf": 0.4,
+      "nms_iou": 0.7,
+      "match_iou": 0.5,
+      "max_det": 300,
+      "ap_conf": 0.001,
+      "small_area_px": 1024,
+      "classifier_conf": 0.6,
+      "crop_padding": 0.1,
+      "min_crop_size": 6,
+      "classifier_imgsz": 224,
+      "warmup": 10,
+      "repeats": 3,
+      "half": false
+    }
+  },
+  "validation_args": {
+    "data": "/home/user/ai_cv_prj/datasets/app_quality_960_q08_v1/detector_app/data.yaml",
+    "imgsz": 960,
+    "batch": 16,
+    "workers": 4,
+    "device": "0",
+    "conf": 0.001,
+    "iou": 0.7,
+    "max_det": 300,
+    "quantize": 32,
+    "augment": false,
+    "rect": true,
+    "fraction": 1.0,
+    "plots": false,
+    "save_json": false,
+    "save_txt": false,
+    "verbose": false,
+    "project": "/home/user/ai_cv_prj/runs/app_quality_960_q08_v1/evaluation_splits_20260919_final",
+    "exist_ok": false
+  },
+  "split_image_counts": {
+    "train": 36204,
+    "val": 559,
+    "test": 45
+  },
+  "source_manifest_sha256": "08ae5c5d905e40d990b930d3eea4883156685f59a52411e60bdc38fa5077e102",
+  "prepared_manifest_sha256": "3f230b359b3ff98d432dd745356ee85eb2b3299d1179d48105d8a94233f6f3ce",
+  "weights": {
+    "historical": {
+      "path": "/home/user/ai_cv_prj/runs/traffic_light_crosswalk_detector/횡단보도 추가 학습/weights/best.pt",
+      "sha256": "df5aa579ac5551e0076aa27b968cf8a92f34725d5602e519c7d63e94b98cf642"
+    },
+    "app": {
+      "path": "/home/user/ai_cv_prj/runs/app_quality_960_q08_v1/detector/app/weights/best.pt",
+      "sha256": "51ee429998ef7f3e600063e9d79e2fdf35beec911e9fa41bb5e89423db61597e"
+    }
+  },
+  "notes": [
+    "train measures fitting, val was used for model selection, test is held out",
+    "AP: Ultralytics official metric at conf=.001; operational: score-ordered matching",
+    "small: GT area <1024 pixels in decoded prepared image, before model letterbox",
+    "speed is batched detector only; excludes decoding, I/O, color classifier and app network",
+    "No color classifier evaluation or training in this run"
+  ],
+  "results": {
+    "val": {
+      "historical": {
+        "images": 559,
+        "elapsed_seconds": 10.794484545011073,
+        "official": [
+          {
+            "Class": "pedestrian_signal",
+            "Images": 542,
+            "Instances": 808,
+            "Box-P": 0.89324564,
+            "Box-R": 0.70417869,
+            "Box-F1": 0.78752343,
+            "mAP50": 0.8767176,
+            "mAP75": 0.74203567,
+            "mAP50-95": 0.62074816
+          },
+          {
+            "Class": "crosswalk",
+            "Images": 558,
+            "Instances": 1059,
+            "Box-P": 0.87477392,
+            "Box-R": 0.76517925,
+            "Box-F1": 0.81631459,
+            "mAP50": 0.84640339,
+            "mAP75": 0.72663916,
+            "mAP50-95": 0.69038503
+          }
+        ],
+        "overall": {
+          "metrics/precision(B)": 0.8840097803726308,
+          "metrics/recall(B)": 0.7346789722533412,
+          "metrics/mAP50(B)": 0.8615604909188015,
+          "metrics/mAP50-95(B)": 0.6555665935122921,
+          "fitness": 0.6555665935122921
+        },
+        "operational": {
+          "pedestrian_signal": {
+            "tp": 448,
+            "fp": 16,
+            "fn": 360,
+            "gt": 808,
+            "small_gt": 656,
+            "small_tp": 310,
+            "precision": 0.9655172413793104,
+            "recall": 0.5544554455445545,
+            "small_recall": 0.4725609756097561
+          },
+          "crosswalk": {
+            "tp": 582,
+            "fp": 12,
+            "fn": 477,
+            "gt": 1059,
+            "small_gt": 15,
+            "small_tp": 0,
+            "precision": 0.9797979797979798,
+            "recall": 0.5495750708215298,
+            "small_recall": 0.0
+          }
+        },
+        "speed_ms_per_image": {
+          "preprocess": 0.36996058109241386,
+          "inference": 2.6954734576732746,
+          "loss": 0.00031854689107917926,
+          "postprocess": 0.5984005932896089
+        }
+      },
+      "app": {
+        "images": 559,
+        "elapsed_seconds": 6.81757184601156,
+        "official": [
+          {
+            "Class": "pedestrian_signal",
+            "Images": 542,
+            "Instances": 808,
+            "Box-P": 0.88564268,
+            "Box-R": 0.76732673,
+            "Box-F1": 0.82225031,
+            "mAP50": 0.91391649,
+            "mAP75": 0.76239246,
+            "mAP50-95": 0.63662778
+          },
+          {
+            "Class": "crosswalk",
+            "Images": 558,
+            "Instances": 1059,
+            "Box-P": 0.91330161,
+            "Box-R": 0.76959396,
+            "Box-F1": 0.83531196,
+            "mAP50": 0.88843844,
+            "mAP75": 0.80588526,
+            "mAP50-95": 0.76164541
+          }
+        ],
+        "overall": {
+          "metrics/precision(B)": 0.899472144767518,
+          "metrics/recall(B)": 0.7684603446180311,
+          "metrics/mAP50(B)": 0.9011774666150163,
+          "metrics/mAP50-95(B)": 0.6991365917014438,
+          "fitness": 0.6991365917014438
+        },
+        "operational": {
+          "pedestrian_signal": {
+            "tp": 500,
+            "fp": 24,
+            "fn": 308,
+            "gt": 808,
+            "small_gt": 656,
+            "small_tp": 355,
+            "precision": 0.9541984732824428,
+            "recall": 0.6188118811881188,
+            "small_recall": 0.5411585365853658
+          },
+          "crosswalk": {
+            "tp": 609,
+            "fp": 9,
+            "fn": 450,
+            "gt": 1059,
+            "small_gt": 15,
+            "small_tp": 0,
+            "precision": 0.9854368932038835,
+            "recall": 0.5750708215297451,
+            "small_recall": 0.0
+          }
+        },
+        "speed_ms_per_image": {
+          "preprocess": 0.36174238129220704,
+          "inference": 2.7501729802455093,
+          "loss": 0.00036335044185595994,
+          "postprocess": 0.6069313366780781
+        }
+      }
+    },
+    "test": {
+      "historical": {
+        "images": 45,
+        "elapsed_seconds": 1.4381801139679737,
+        "official": [
+          {
+            "Class": "pedestrian_signal",
+            "Images": 45,
+            "Instances": 120,
+            "Box-P": 0.72972973,
+            "Box-R": 0.9,
+            "Box-F1": 0.80597015,
+            "mAP50": 0.8338272,
+            "mAP75": 0.59852726,
+            "mAP50-95": 0.54592776
+          },
+          {
+            "Class": "crosswalk",
+            "Images": 45,
+            "Instances": 121,
+            "Box-P": 0.4611399,
+            "Box-R": 0.73553719,
+            "Box-F1": 0.56687898,
+            "mAP50": 0.69072752,
+            "mAP75": 0.48714201,
+            "mAP50-95": 0.5043582
+          }
+        ],
+        "overall": {
+          "metrics/precision(B)": 0.5954348130513933,
+          "metrics/recall(B)": 0.8177685950413223,
+          "metrics/mAP50(B)": 0.7622773570463968,
+          "metrics/mAP50-95(B)": 0.5251429824990337,
+          "fitness": 0.5251429824990337
+        },
+        "operational": {
+          "pedestrian_signal": {
+            "tp": 36,
+            "fp": 0,
+            "fn": 84,
+            "gt": 120,
+            "small_gt": 96,
+            "small_tp": 17,
+            "precision": 1.0,
+            "recall": 0.3,
+            "small_recall": 0.17708333333333334
+          },
+          "crosswalk": {
+            "tp": 46,
+            "fp": 1,
+            "fn": 75,
+            "gt": 121,
+            "small_gt": 3,
+            "small_tp": 0,
+            "precision": 0.9787234042553191,
+            "recall": 0.38016528925619836,
+            "small_recall": 0.0
+          }
+        },
+        "speed_ms_per_image": {
+          "preprocess": 0.5039049558238022,
+          "inference": 3.4111204013849297,
+          "loss": 0.0002515321183535788,
+          "postprocess": 0.6833822427627941
+        }
+      },
+      "app": {
+        "images": 45,
+        "elapsed_seconds": 1.5596833099843934,
+        "official": [
+          {
+            "Class": "pedestrian_signal",
+            "Images": 45,
+            "Instances": 120,
+            "Box-P": 0.89393169,
+            "Box-R": 0.63210397,
+            "Box-F1": 0.74055644,
+            "mAP50": 0.88585766,
+            "mAP75": 0.56947751,
+            "mAP50-95": 0.54083085
+          },
+          {
+            "Class": "crosswalk",
+            "Images": 45,
+            "Instances": 121,
+            "Box-P": 0.91726065,
+            "Box-R": 0.64137078,
+            "Box-F1": 0.75489839,
+            "mAP50": 0.72489802,
+            "mAP75": 0.58807413,
+            "mAP50-95": 0.5697866
+          }
+        ],
+        "overall": {
+          "metrics/precision(B)": 0.9055961720387056,
+          "metrics/recall(B)": 0.6367373745272553,
+          "metrics/mAP50(B)": 0.8053778402211933,
+          "metrics/mAP50-95(B)": 0.5553087271196875,
+          "fitness": 0.5553087271196875
+        },
+        "operational": {
+          "pedestrian_signal": {
+            "tp": 47,
+            "fp": 0,
+            "fn": 73,
+            "gt": 120,
+            "small_gt": 96,
+            "small_tp": 27,
+            "precision": 1.0,
+            "recall": 0.39166666666666666,
+            "small_recall": 0.28125
+          },
+          "crosswalk": {
+            "tp": 55,
+            "fp": 0,
+            "fn": 66,
+            "gt": 121,
+            "small_gt": 3,
+            "small_tp": 0,
+            "precision": 1.0,
+            "recall": 0.45454545454545453,
+            "small_recall": 0.0
+          }
+        },
+        "speed_ms_per_image": {
+          "preprocess": 0.4287048204181095,
+          "inference": 3.317953312459091,
+          "loss": 0.00031508971005678177,
+          "postprocess": 0.6589333992451429
+        }
+      }
+    },
+    "train": {
+      "historical": {
+        "images": 36204,
+        "elapsed_seconds": 220.63271972798975,
+        "official": [
+          {
+            "Class": "pedestrian_signal",
+            "Images": 13585,
+            "Instances": 13594,
+            "Box-P": 0.91581091,
+            "Box-R": 0.94865382,
+            "Box-F1": 0.9319431,
+            "mAP50": 0.96909402,
+            "mAP75": 0.90782902,
+            "mAP50-95": 0.7663295
+          },
+          {
+            "Class": "crosswalk",
+            "Images": 35715,
+            "Instances": 35929,
+            "Box-P": 0.98059892,
+            "Box-R": 0.98385705,
+            "Box-F1": 0.98222528,
+            "mAP50": 0.98811018,
+            "mAP75": 0.96566257,
+            "mAP50-95": 0.935106
+          }
+        ],
+        "overall": {
+          "metrics/precision(B)": 0.9482049153711397,
+          "metrics/recall(B)": 0.9662554346338812,
+          "metrics/mAP50(B)": 0.9786020995079311,
+          "metrics/mAP50-95(B)": 0.8507177528299199,
+          "fitness": 0.8507177528299199
+        },
+        "operational": {
+          "pedestrian_signal": {
+            "tp": 12928,
+            "fp": 1209,
+            "fn": 666,
+            "gt": 13594,
+            "small_gt": 10985,
+            "small_tp": 10407,
+            "precision": 0.9144797340312655,
+            "recall": 0.9510077975577461,
+            "small_recall": 0.9473827947200728
+          },
+          "crosswalk": {
+            "tp": 35365,
+            "fp": 715,
+            "fn": 564,
+            "gt": 35929,
+            "small_gt": 253,
+            "small_tp": 144,
+            "precision": 0.9801829268292683,
+            "recall": 0.9843023741267499,
+            "small_recall": 0.5691699604743083
+          }
+        },
+        "speed_ms_per_image": {
+          "preprocess": 0.34006164216570933,
+          "inference": 2.664249854066718,
+          "loss": 0.0003145723609325175,
+          "postprocess": 0.571779770367523
+        }
+      },
+      "app": {
+        "images": 36204,
+        "elapsed_seconds": 218.72051380196353,
+        "official": [
+          {
+            "Class": "pedestrian_signal",
+            "Images": 13585,
+            "Instances": 13594,
+            "Box-P": 0.91562381,
+            "Box-R": 0.95483301,
+            "Box-F1": 0.93481745,
+            "mAP50": 0.96971649,
+            "mAP75": 0.91610349,
+            "mAP50-95": 0.77040286
+          },
+          {
+            "Class": "crosswalk",
+            "Images": 35715,
+            "Instances": 35929,
+            "Box-P": 0.98424185,
+            "Box-R": 0.98463637,
+            "Box-F1": 0.98443907,
+            "mAP50": 0.99002782,
+            "mAP75": 0.97810004,
+            "mAP50-95": 0.95362475
+          }
+        ],
+        "overall": {
+          "metrics/precision(B)": 0.9499328299606595,
+          "metrics/recall(B)": 0.9697346903659279,
+          "metrics/mAP50(B)": 0.9798721581881971,
+          "metrics/mAP50-95(B)": 0.8620138048430913,
+          "fitness": 0.8620138048430913
+        },
+        "operational": {
+          "pedestrian_signal": {
+            "tp": 13212,
+            "fp": 1559,
+            "fn": 382,
+            "gt": 13594,
+            "small_gt": 10985,
+            "small_tp": 10655,
+            "precision": 0.8944553517026607,
+            "recall": 0.9718993673679565,
+            "small_recall": 0.9699590350477925
+          },
+          "crosswalk": {
+            "tp": 35489,
+            "fp": 704,
+            "fn": 440,
+            "gt": 35929,
+            "small_gt": 253,
+            "small_tp": 149,
+            "precision": 0.9805487248915536,
+            "recall": 0.987753625205266,
+            "small_recall": 0.5889328063241107
+          }
+        },
+        "speed_ms_per_image": {
+          "preprocess": 0.3635751104310623,
+          "inference": 2.6583617671948296,
+          "loss": 0.00031440801159228173,
+          "postprocess": 0.5637502029747216
+        }
+      }
+    }
+  }
+}

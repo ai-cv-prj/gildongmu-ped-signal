@@ -1,0 +1,31 @@
+{
+  "test_app": {
+    "frames": 45,
+    "saved_frame_metrics_match_report": true
+  },
+  "test_historical": {
+    "frames": 45,
+    "saved_frame_metrics_match_report": true
+  },
+  "train_historical": {
+    "frames": 36204,
+    "saved_frame_metrics_match_report": true
+  },
+  "val_app": {
+    "frames": 559,
+    "saved_frame_metrics_match_report": true
+  },
+  "val_historical": {
+    "frames": 559,
+    "saved_frame_metrics_match_report": true
+  },
+  "train_app": {
+    "frames": 36204,
+    "saved_frame_metrics_match_report": true
+  },
+  "cross_split_identical_source_images": 0,
+  "coordinate_audit": {
+    "val_test_images": 604,
+    "max_error_px": 0.00013692890627226006
+  }
+}

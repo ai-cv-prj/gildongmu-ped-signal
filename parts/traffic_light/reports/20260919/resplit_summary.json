@@ -1,0 +1,97 @@
+{
+  "complete": true,
+  "config": {
+    "base_config": "parts/traffic_light/configs/app_quality.json",
+    "base_config_sha256": "e13775762b207d674f472dafe67c81b01fa4e63d8527256633233f714a988648",
+    "prepared_manifest_sha256": "3f230b359b3ff98d432dd745356ee85eb2b3299d1179d48105d8a94233f6f3ce",
+    "output": "datasets/app_quality_960_q08_resplit_v1",
+    "runs_root": "runs/app_quality_960_q08_resplit_v1",
+    "ratios": [
+      0.8,
+      0.1,
+      0.1
+    ],
+    "seed": 42,
+    "sequence_block_size": 100,
+    "epochs": 50,
+    "patience": 7
+  },
+  "statistics": {
+    "train": {
+      "images": 29447,
+      "crosswalk": 29689,
+      "signal_images": 11341,
+      "multi_signal_images": 251,
+      "multi_crosswalk_images": 572,
+      "pedestrian_signal": 11623,
+      "signal_small": 7787,
+      "signal_large": 2226,
+      "signal_tiny": 1610
+    },
+    "val": {
+      "images": 3681,
+      "crosswalk": 3710,
+      "signal_images": 1416,
+      "multi_signal_images": 29,
+      "multi_crosswalk_images": 71,
+      "pedestrian_signal": 1450,
+      "signal_small": 967,
+      "signal_large": 280,
+      "signal_tiny": 203
+    },
+    "test": {
+      "images": 3680,
+      "crosswalk": 3710,
+      "signal_images": 1415,
+      "multi_signal_images": 30,
+      "multi_crosswalk_images": 71,
+      "pedestrian_signal": 1449,
+      "signal_large": 279,
+      "signal_small": 967,
+      "signal_tiny": 203
+    }
+  },
+  "previous_to_new": {
+    "train": {
+      "val": 3619,
+      "train": 28966,
+      "test": 3619
+    },
+    "val": {
+      "train": 446,
+      "val": 57,
+      "test": 56
+    },
+    "test": {
+      "train": 35,
+      "val": 5,
+      "test": 5
+    }
+  },
+  "classifier_counts": {
+    "train": {
+      "red": 8702,
+      "green": 2921
+    },
+    "val": {
+      "red": 1027,
+      "green": 423
+    },
+    "test": {
+      "red": 983,
+      "green": 466
+    }
+  },
+  "groups": 10973,
+  "largest_group": 79,
+  "source_image_count": 36808,
+  "classifier_crop_count": 14522,
+  "detector_manifest_sha256": "66cfb40bce9f071d8c7b3a61de9e4e80a2894a1a97b7afea05715492c568b033",
+  "classifier_manifest_sha256": "1a160df2f563c2a1dc601f901bfb952a8b9004949baed76b31d9cea26da52db4",
+  "data_yaml_sha256": "3d526c696b2c970d4f86df83caf38fdeb2b8eb6e49650ce0296609954b1d7e5f",
+  "limitations": [
+    "sequence groups are filename blocks, not verified capture sessions/locations",
+    "new test contains old train samples; historical checkpoints are not independent baselines",
+    "existing image JPEGs/crops reused without re-encoding; coordinates unchanged"
+  ]
+}

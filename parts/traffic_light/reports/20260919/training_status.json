@@ -1,0 +1,14 @@
+{
+  "observed_at_utc": "2026-09-19T06:23:56.491184+00:00",
+  "status": "running",
+  "process_observation": "resplit_app_quality train process confirmed running during documentation",
+  "started_by": "user",
+  "epochs_limit": 50,
+  "patience": 7,
+  "initial_model": "/home/user/ai_cv_prj/yolo26s.pt",
+  "resume": false,
+  "latest_completed_epoch": null,
+  "completion_audit_present": false,
+  "results_csv": "runs/app_quality_960_q08_resplit_v1/detector/app/results.csv",
+  "note": "Snapshot during execution; final metrics not yet available."
+}

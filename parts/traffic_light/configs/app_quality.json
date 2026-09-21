@@ -1,0 +1,70 @@
+{
+  "prepared_root": "datasets/app_quality_960_q08_v1",
+  "runs_root": "runs/app_quality_960_q08_v1",
+  "transport": {
+    "max_side": 960,
+    "quality": 0.8
+  },
+  "environment": {
+    "ultralytics": "8.4.150",
+    "torch": "2.11.0+cu128",
+    "torchvision": "0.26.0+cu128",
+    "opencv-python": "4.14.0.94",
+    "pillow": "12.3.0",
+    "PyYAML": "6.0.3"
+  },
+  "detector": {
+    "source_dataset": "datasets/intersection_signal_crosswalk_yolo",
+    "reference_args": "parts/traffic_light/configs/app_quality_detector_reference.json",
+    "reference_run_args": "runs/traffic_light_crosswalk_detector/횡단보도 추가 학습/args.yaml",
+    "reference_args_sha256": "7043db28bcc59bb3fd60045365368117096f2448de4b7f0dfa3ecd95da8c8e63",
+    "initial_weights": "yolo26s.pt",
+    "initial_sha256": "646f8bc3fe0a656803d95c294f7852321748cb29d13466a1af8862e2db384a1b",
+    "historical_weights": "runs/traffic_light_crosswalk_detector/횡단보도 추가 학습/weights/best.pt",
+    "historical_sha256": "df5aa579ac5551e0076aa27b968cf8a92f34725d5602e519c7d63e94b98cf642",
+    "reference_snapshot_sha256": "b2be9b7379b4c5d7f2974c80ddedd88c4cc25aeef1dc78ec1fa675daad937209"
+  },
+  "classifier": {
+    "source_dataset": "datasets/intersection_signal_classifier",
+    "initial_weights": ".torch-cache/hub/checkpoints/mobilenet_v3_small-047dcff4.pth",
+    "initial_sha256": "047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f",
+    "historical_weights": "runs/traffic_light_classifier/20260915T085300Z_3f63cc9d/mobilenet_v3_small/best.pt",
+    "historical_sha256": "e3fb14c1efd89686be7f03fba98f5aac34c57430436d1e1415fc448f25745098",
+    "settings_provenance": "Reconstructed from existing script defaults and documented command; historical full CLI config was not saved.",
+    "args": {
+      "model": "mobilenet_v3_small",
+      "epochs": 30,
+      "batch_size": 64,
+      "imgsz": 224,
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "patience": 7,
+      "workers": 4,
+      "device": "0",
+      "seed": 42,
+      "amp": true,
+      "no_class_weights": false,
+      "no_pretrained": false
+    }
+  },
+  "evaluation": {
+    "manifest": "datasets/app_holdout/manifest.jsonl",
+    "output": "runs/app_quality_960_q08_v1/evaluation",
+    "device": "0",
+    "imgsz": 960,
+    "conf": 0.4,
+    "crosswalk_conf": 0.4,
+    "nms_iou": 0.7,
+    "match_iou": 0.5,
+    "max_det": 300,
+    "ap_conf": 0.001,
+    "small_area_px": 1024,
+    "classifier_conf": 0.6,
+    "crop_padding": 0.1,
+    "min_crop_size": 6,
+    "classifier_imgsz": 224,
+    "warmup": 10,
+    "repeats": 3,
+    "half": false
+  }
+}

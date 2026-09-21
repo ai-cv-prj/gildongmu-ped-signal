@@ -1,0 +1,14 @@
+.venv/
+.torch-cache/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+data/
+datasets/
+weights/
+runs/
+*.pt
+*.onnx
+*.engine

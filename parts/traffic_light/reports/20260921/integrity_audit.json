@@ -1,0 +1,11 @@
+{
+  "images": {
+    "val": 3681,
+    "test": 3680
+  },
+  "all_saved_frame_metrics_match_reports": true,
+  "class_gt_counts_match_preparation": true,
+  "split_groups_and_source_hashes_disjoint": true,
+  "selected_image_and_label_hashes_verified": true,
+  "checkpoint_matches_training_completion_hash": true
+}

@@ -1,0 +1,277 @@
+{
+  "scope": "resplit_validation_test_detection_only",
+  "environment": {
+    "ultralytics": "8.4.150",
+    "torch": "2.11.0+cu128",
+    "torchvision": "0.26.0+cu128",
+    "opencv-python": "4.14.0.94",
+    "pillow": "12.3.0",
+    "PyYAML": "6.0.3"
+  },
+  "config": {
+    "prepared_root": "datasets/app_quality_960_q08_resplit_v1",
+    "runs_root": "runs/app_quality_960_q08_resplit_v1",
+    "transport": {
+      "max_side": 960,
+      "quality": 0.8
+    },
+    "environment": {
+      "ultralytics": "8.4.150",
+      "torch": "2.11.0+cu128",
+      "torchvision": "0.26.0+cu128",
+      "opencv-python": "4.14.0.94",
+      "pillow": "12.3.0",
+      "PyYAML": "6.0.3"
+    },
+    "detector": {
+      "source_dataset": "datasets/intersection_signal_crosswalk_yolo",
+      "reference_args": "parts/traffic_light/configs/app_quality_detector_reference.json",
+      "reference_run_args": "runs/traffic_light_crosswalk_detector/횡단보도 추가 학습/args.yaml",
+      "reference_args_sha256": "7043db28bcc59bb3fd60045365368117096f2448de4b7f0dfa3ecd95da8c8e63",
+      "initial_weights": "yolo26s.pt",
+      "initial_sha256": "646f8bc3fe0a656803d95c294f7852321748cb29d13466a1af8862e2db384a1b",
+      "historical_weights": "runs/traffic_light_crosswalk_detector/횡단보도 추가 학습/weights/best.pt",
+      "historical_sha256": "df5aa579ac5551e0076aa27b968cf8a92f34725d5602e519c7d63e94b98cf642",
+      "reference_snapshot_sha256": "b2be9b7379b4c5d7f2974c80ddedd88c4cc25aeef1dc78ec1fa675daad937209"
+    },
+    "classifier": {
+      "source_dataset": "datasets/intersection_signal_classifier",
+      "initial_weights": ".torch-cache/hub/checkpoints/mobilenet_v3_small-047dcff4.pth",
+      "initial_sha256": "047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f",
+      "historical_weights": "runs/traffic_light_classifier/20260915T085300Z_3f63cc9d/mobilenet_v3_small/best.pt",
+      "historical_sha256": "e3fb14c1efd89686be7f03fba98f5aac34c57430436d1e1415fc448f25745098",
+      "settings_provenance": "Reconstructed from existing script defaults and documented command; historical full CLI config was not saved.",
+      "args": {
+        "model": "mobilenet_v3_small",
+        "epochs": 30,
+        "batch_size": 64,
+        "imgsz": 224,
+        "learning_rate": 0.001,
+        "weight_decay": 0.0001,
+        "patience": 7,
+        "workers": 4,
+        "device": "0",
+        "seed": 42,
+        "amp": true,
+        "no_class_weights": false,
+        "no_pretrained": false
+      }
+    },
+    "evaluation": {
+      "manifest": "datasets/app_holdout/manifest.jsonl",
+      "output": "runs/app_quality_960_q08_v1/evaluation",
+      "device": "0",
+      "imgsz": 960,
+      "conf": 0.4,
+      "crosswalk_conf": 0.4,
+      "nms_iou": 0.7,
+      "match_iou": 0.5,
+      "max_det": 300,
+      "ap_conf": 0.001,
+      "small_area_px": 1024,
+      "classifier_conf": 0.6,
+      "crop_padding": 0.1,
+      "min_crop_size": 6,
+      "classifier_imgsz": 224,
+      "warmup": 10,
+      "repeats": 3,
+      "half": false
+    }
+  },
+  "validation_args": {
+    "data": "/home/user/ai_cv_prj/datasets/app_quality_960_q08_resplit_v1/detector_app/data.yaml",
+    "imgsz": 960,
+    "batch": 16,
+    "workers": 4,
+    "device": "0",
+    "conf": 0.001,
+    "iou": 0.7,
+    "max_det": 300,
+    "quantize": 32,
+    "augment": false,
+    "rect": true,
+    "fraction": 1.0,
+    "plots": false,
+    "save_json": false,
+    "save_txt": false,
+    "verbose": false,
+    "project": "/home/user/ai_cv_prj/runs/app_quality_960_q08_resplit_v1/evaluation_20260921",
+    "exist_ok": false
+  },
+  "split_image_counts": {
+    "val": 3681,
+    "train": 29447,
+    "test": 3680
+  },
+  "source_manifest_sha256": null,
+  "prepared_manifest_sha256": "66cfb40bce9f071d8c7b3a61de9e4e80a2894a1a97b7afea05715492c568b033",
+  "preparation_summary_sha256": "aad50dfb096cb627fb0449d67fcc08450af7128679f699ff2f7791422189b415",
+  "resplit_config": {
+    "base_config": "parts/traffic_light/configs/app_quality.json",
+    "base_config_sha256": "e13775762b207d674f472dafe67c81b01fa4e63d8527256633233f714a988648",
+    "prepared_manifest_sha256": "3f230b359b3ff98d432dd745356ee85eb2b3299d1179d48105d8a94233f6f3ce",
+    "output": "datasets/app_quality_960_q08_resplit_v1",
+    "runs_root": "runs/app_quality_960_q08_resplit_v1",
+    "ratios": [
+      0.8,
+      0.1,
+      0.1
+    ],
+    "seed": 42,
+    "sequence_block_size": 100,
+    "epochs": 50,
+    "patience": 7
+  },
+  "weights": {
+    "app": {
+      "path": "/home/user/ai_cv_prj/runs/app_quality_960_q08_resplit_v1/detector/app/weights/best.pt",
+      "sha256": "d530a19b53570988ded114defdbd77af51d0ad06228cad38b7464c9758da42aa"
+    }
+  },
+  "notes": [
+    "train measures fitting, val was used for model selection, test is held out",
+    "AP: Ultralytics official metric at conf=.001; operational: score-ordered matching",
+    "small: GT area <1024 pixels in decoded prepared image, before model letterbox",
+    "speed is batched detector only; excludes decoding, I/O, color classifier and app network",
+    "No color classifier evaluation or training in this run",
+    "sequence groups are filename blocks, not verified capture sessions/locations",
+    "new test contains old train samples; historical checkpoints are not independent baselines",
+    "existing image JPEGs/crops reused without re-encoding; coordinates unchanged"
+  ],
+  "results": {
+    "val": {
+      "app": {
+        "images": 3681,
+        "elapsed_seconds": 27.776069378014654,
+        "official": [
+          {
+            "Class": "pedestrian_signal",
+            "Images": 1416,
+            "Instances": 1450,
+            "Box-P": 0.89082104,
+            "Box-R": 0.95034483,
+            "Box-F1": 0.91962075,
+            "mAP50": 0.95818346,
+            "mAP75": 0.88924346,
+            "mAP50-95": 0.7562244
+          },
+          {
+            "Class": "crosswalk",
+            "Images": 3632,
+            "Instances": 3710,
+            "Box-P": 0.98324156,
+            "Box-R": 0.96981132,
+            "Box-F1": 0.97648026,
+            "mAP50": 0.98827721,
+            "mAP75": 0.96052149,
+            "mAP50-95": 0.93207274
+          }
+        ],
+        "overall": {
+          "metrics/precision(B)": 0.9370312997252936,
+          "metrics/recall(B)": 0.960078074170462,
+          "metrics/mAP50(B)": 0.9732303352789113,
+          "metrics/mAP50-95(B)": 0.8441485699317376,
+          "fitness": 0.8441485699317376
+        },
+        "operational": {
+          "pedestrian_signal": {
+            "tp": 1390,
+            "fp": 205,
+            "fn": 60,
+            "gt": 1450,
+            "small_gt": 1170,
+            "small_tp": 1120,
+            "precision": 0.8714733542319749,
+            "recall": 0.9586206896551724,
+            "small_recall": 0.9572649572649573
+          },
+          "crosswalk": {
+            "tp": 3618,
+            "fp": 80,
+            "fn": 92,
+            "gt": 3710,
+            "small_gt": 36,
+            "small_tp": 25,
+            "precision": 0.9783666846944294,
+            "recall": 0.9752021563342318,
+            "small_recall": 0.6944444444444444
+          }
+        },
+        "speed_ms_per_image": {
+          "preprocess": 0.345473206336758,
+          "inference": 2.663286212306491,
+          "loss": 0.0002948405567472621,
+          "postprocess": 0.5586922643722648
+        }
+      }
+    },
+    "test": {
+      "app": {
+        "images": 3680,
+        "elapsed_seconds": 25.743563987954985,
+        "official": [
+          {
+            "Class": "pedestrian_signal",
+            "Images": 1415,
+            "Instances": 1449,
+            "Box-P": 0.88893061,
+            "Box-R": 0.9500218,
+            "Box-F1": 0.91846146,
+            "mAP50": 0.95450917,
+            "mAP75": 0.88670538,
+            "mAP50-95": 0.75011312
+          },
+          {
+            "Class": "crosswalk",
+            "Images": 3632,
+            "Instances": 3710,
+            "Box-P": 0.98089176,
+            "Box-R": 0.96855555,
+            "Box-F1": 0.97468462,
+            "mAP50": 0.98867011,
+            "mAP75": 0.96180539,
+            "mAP50-95": 0.93191975
+          }
+        ],
+        "overall": {
+          "metrics/precision(B)": 0.9349111834549813,
+          "metrics/recall(B)": 0.9592886755136629,
+          "metrics/mAP50(B)": 0.9715896427542243,
+          "metrics/mAP50-95(B)": 0.8410164358463756,
+          "fitness": 0.8410164358463756
+        },
+        "operational": {
+          "pedestrian_signal": {
+            "tp": 1397,
+            "fp": 207,
+            "fn": 52,
+            "gt": 1449,
+            "small_gt": 1170,
+            "small_tp": 1126,
+            "precision": 0.8709476309226932,
+            "recall": 0.9641131815044859,
+            "small_recall": 0.9623931623931624
+          },
+          "crosswalk": {
+            "tp": 3610,
+            "fp": 87,
+            "fn": 100,
+            "gt": 3710,
+            "small_gt": 34,
+            "small_tp": 22,
+            "precision": 0.9764674060048688,
+            "recall": 0.9730458221024259,
+            "small_recall": 0.6470588235294118
+          }
+        },
+        "speed_ms_per_image": {
+          "preprocess": 0.3462820922520578,
+          "inference": 2.6673595915464987,
+          "loss": 0.00029729648224968946,
+          "postprocess": 0.5703223432805238
+        }
+      }
+    }
+  }
+}
